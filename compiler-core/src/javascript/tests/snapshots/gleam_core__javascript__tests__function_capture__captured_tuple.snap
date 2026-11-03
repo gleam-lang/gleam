@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/javascript/tests/function_capture.rs
+expression: "\npub fn main() {\n  let func = fn() {\n    #(Nil, fn(x, y, z) { x + y + z })\n  }\n  let f = func().1(1, _, 2)\n\n  f(0)\n}"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  let func = fn() {
+    #(Nil, fn(x, y, z) { x + y + z })
+  }
+  let f = func().1(1, _, 2)
+
+  f(0)
+}
+
+----- COMPILED JAVASCRIPT
+export function main() {
+  let func = () => { return [undefined, (x, y, z) => { return (x + y) + z; }]; };
+  let _block;
+  {
+    let tmp = func()[1];
+    _block = (_capture) => { return tmp(1, _capture, 2); };
+  }
+  let f = _block;
+  return f(0);
+}

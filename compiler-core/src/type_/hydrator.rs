@@ -5,8 +5,8 @@ use super::*;
 use crate::{
     analyse::name::check_name_case,
     ast::{
-        Layer, TypeAst, TypeAstConstructor, TypeAstConstructorName, TypeAstFn, TypeAstHole,
-        TypeAstTuple, TypeAstVar,
+        HasLocation, Layer, TypeAst, TypeAstConstructor, TypeAstConstructorName, TypeAstFn,
+        TypeAstHole, TypeAstTuple, TypeAstVar,
     },
     reference::ReferenceKind,
 };

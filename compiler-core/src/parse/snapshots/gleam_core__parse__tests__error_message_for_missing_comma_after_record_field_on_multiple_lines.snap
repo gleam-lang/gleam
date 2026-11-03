@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\npub type Wibble {\n  Wibble(\n    wibble: Int\n    wobble: String\n  )\n}\n"
+---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble(
+    wibble: Int
+    wobble: String
+  )
+}
+
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:5:5
+  │
+4 │     wibble: Int
+  │                - Did you forget a `,` here?
+5 │     wobble: String
+  │     ^^^^^^ I was not expecting this
+
+Found a name, expected one of: 
+- `)`
+- `,`

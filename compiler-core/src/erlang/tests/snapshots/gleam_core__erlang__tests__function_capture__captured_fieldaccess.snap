@@ -1,0 +1,40 @@
+---
+source: compiler-core/src/erlang/tests/function_capture.rs
+expression: "\npub type A(a) {\n  A(f: fn(a) -> a)\n}\npub fn main() {\n  let func = fn() {\n    A(fn(x) { x })\n  }\n  let f = func().f(_)\n\n  f(0)\n}"
+---
+----- SOURCE CODE
+
+pub type A(a) {
+  A(f: fn(a) -> a)
+}
+pub fn main() {
+  let func = fn() {
+    A(fn(x) { x })
+  }
+  let f = func().f(_)
+
+  f(0)
+}
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-export([main/0]).
+-export_type([a/1]).
+
+-type a(I) :: {a, fun((I) -> I)}.
+
+-spec main() -> integer().
+main() ->
+    Func = fun() ->
+        {a, fun(X) ->
+            X
+        end}
+    end,
+    F = begin
+        Tmp = erlang:element(2, Func()),
+        fun(_capture) ->
+            Tmp(_capture)
+        end
+    end,
+    F(0).

@@ -332,7 +332,7 @@ mod tests {
             path: file3.clone(),
             src: "blah".into(),
             error: Box::new(ParseError {
-                error: ParseErrorType::ConcatPatternVariableLeftHandSide,
+                error: Box::new(ParseErrorType::ConcatPatternVariableLeftHandSide),
                 location: SrcSpan::new(1, 4),
             }),
         };
@@ -392,7 +392,7 @@ mod tests {
             path: file1.clone(),
             src: "blah".into(),
             error: Box::new(ParseError {
-                error: ParseErrorType::ConcatPatternVariableLeftHandSide,
+                error: Box::new(ParseErrorType::ConcatPatternVariableLeftHandSide),
                 location: SrcSpan::new(1, 4),
             }),
         };
@@ -433,7 +433,7 @@ mod tests {
             path: file.to_path_buf(),
             src: "blah".into(),
             error: Box::new(ParseError {
-                error: ParseErrorType::ConcatPatternVariableLeftHandSide,
+                error: Box::new(ParseErrorType::ConcatPatternVariableLeftHandSide),
                 location: SrcSpan::new(1, 4),
             }),
         };
@@ -476,7 +476,7 @@ mod tests {
             path: file1.clone(),
             src: "blah".into(),
             error: Box::new(ParseError {
-                error: ParseErrorType::ConcatPatternVariableLeftHandSide,
+                error: Box::new(ParseErrorType::ConcatPatternVariableLeftHandSide),
                 location: SrcSpan::new(1, 4),
             }),
         };

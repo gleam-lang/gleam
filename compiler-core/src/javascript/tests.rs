@@ -23,6 +23,7 @@ mod consts;
 mod custom_types;
 mod echo;
 mod externals;
+mod function_capture;
 mod functions;
 mod generics;
 mod lists;

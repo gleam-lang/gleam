@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/javascript/tests/function_capture.rs
+expression: "\npub fn add(x, y) {\n    x + y\n}\npub fn main() {\n    let add_one = add(_, 1)\n    let one = add_one(0)\n}"
+---
+----- SOURCE CODE
+
+pub fn add(x, y) {
+    x + y
+}
+pub fn main() {
+    let add_one = add(_, 1)
+    let one = add_one(0)
+}
+
+----- COMPILED JAVASCRIPT
+export function add(x, y) {
+  return x + y;
+}
+
+export function main() {
+  let add_one = (_capture) => { return add(_capture, 1); };
+  let one = add_one(0);
+  return one;
+}

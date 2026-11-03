@@ -27,7 +27,7 @@ use hexpm::version::{LowestVersion, Version};
 use imbl::hashmap;
 use itertools::Itertools;
 use num_bigint::BigInt;
-use vec1::Vec1;
+use vec1::{Vec1, vec1};
 
 #[derive(
     Clone, Copy, Debug, Eq, PartialOrd, Ord, PartialEq, serde::Serialize, serde::Deserialize,
@@ -482,7 +482,19 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             UntypedExpr::Fn {
                 location,
-                kind,
+                kind: kind @ FunctionLiteralKind::Capture { .. },
+                arguments,
+                body,
+                return_annotation,
+                ..
+            } => {
+                Ok(self.infer_function_capture(arguments, body, kind, return_annotation, location))
+            }
+
+            UntypedExpr::Fn {
+                location,
+                kind:
+                    kind @ (FunctionLiteralKind::Use { .. } | FunctionLiteralKind::Anonymous { .. }),
                 arguments,
                 body,
                 return_annotation,
@@ -1067,6 +1079,139 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         TypedExpr::NegateInt {
             location,
             value: Box::new(value),
+        }
+    }
+
+    fn infer_function_capture(
+        &mut self,
+        arguments: Vec<UntypedArg>,
+        body: Vec1<UntypedStatement>,
+        kind: FunctionLiteralKind,
+        return_annotation: Option<TypeAst>,
+        location: SrcSpan,
+    ) -> TypedExpr {
+        // Normally, a function capture like:
+        // ```
+        // <function>(a, _, b)
+        // ```
+        // is compiled as:
+        // ```
+        // fn(_capture) { <function>(a, _capture, b) }
+        // ```
+        //
+        // However, if `<function>` is an `UntypedExpr::Call`, `UntypedExpr::TupleIndex`,
+        // or `UntypedExpr::FieldAccess`, we want to capture the function returned by
+        // that expression. To avoid re-evaluating `<function>` on every call, it is
+        // compiled into a block that binds the result to a temporary variable first:
+        // ```
+        // {
+        //   let tmp = <function> // Evaluate <function> and assign it to `tmp`
+        //   fn(_capture) { tmp(a, _capture, b) }
+        // }
+        // ```
+        //
+        // Note: Variables are distinguished by their `location` (`SrcSpan`), so they
+        // must be set carefully. In particular, the location of the compiler-generated
+        // variable `tmp` and the location of the anonymous function argument `_capture`
+        // must be distinct.
+        if let Statement::Expression(UntypedExpr::Call {
+            location: call_location,
+            fun,
+            arguments: call_arguments,
+            open_parenthesis,
+        }) = body.first()
+        {
+            match &**fun {
+                UntypedExpr::Call { .. }
+                | UntypedExpr::TupleIndex { .. }
+                | UntypedExpr::FieldAccess { .. } => {
+                    let capture_location = call_arguments
+                        .iter()
+                        .find(|i| i.is_capture_hole())
+                        .expect("capture hole not found")
+                        .location;
+
+                    let tmp_value_name: EcoString = "tmp".into();
+                    let capture_value_name: EcoString = CAPTURE_VARIABLE.into();
+
+                    let tmp = Pattern::Variable {
+                        location: *call_location,
+                        name: tmp_value_name.clone(),
+                        type_: (),
+                        origin: VariableOrigin {
+                            syntax: VariableSyntax::Generated,
+                            declaration: VariableDeclaration::LetPattern,
+                        },
+                    };
+
+                    let call = UntypedExpr::Call {
+                        location: *call_location,
+                        fun: Box::new(UntypedExpr::Var {
+                            location: *call_location,
+                            name: tmp_value_name,
+                        }),
+                        arguments: call_arguments.clone(),
+                        open_parenthesis: *open_parenthesis,
+                    };
+
+                    let fn_ = UntypedExpr::Fn {
+                        location: *call_location,
+                        kind: FunctionLiteralKind::Anonymous {
+                            head: *call_location,
+                        },
+                        end_of_head_byte_index: call_location.end,
+                        arguments: vec![Arg {
+                            names: ArgNames::Named {
+                                name: capture_value_name,
+                                location: capture_location,
+                            },
+                            type_: (),
+                            location: *call_location,
+                            annotation: None,
+                        }],
+                        body: vec1![Statement::Expression(call)],
+                        return_annotation: None,
+                    };
+
+                    self.infer_block(
+                        vec1![
+                            Statement::Assignment(Box::new(Assignment {
+                                location: *call_location,
+                                value: *fun.clone(),
+                                pattern: tmp,
+                                kind: AssignmentKind::Let,
+                                compiled_case: CompiledCase::failure(),
+                                annotation: None
+                            })),
+                            Statement::Expression(fn_)
+                        ],
+                        *call_location,
+                    )
+                }
+
+                UntypedExpr::Int { .. }
+                | UntypedExpr::Var { .. }
+                | UntypedExpr::List { .. }
+                | UntypedExpr::Case { .. }
+                | UntypedExpr::Todo { .. }
+                | UntypedExpr::Echo { .. }
+                | UntypedExpr::Float { .. }
+                | UntypedExpr::Block { .. }
+                | UntypedExpr::Pipeline { .. }
+                | UntypedExpr::BinOp { .. }
+                | UntypedExpr::Panic { .. }
+                | UntypedExpr::String { .. }
+                | UntypedExpr::BitArray { .. }
+                | UntypedExpr::NegateInt { .. }
+                | UntypedExpr::NegateBool { .. }
+                | UntypedExpr::RecordUpdate { .. }
+                | UntypedExpr::Tuple { .. }
+                | UntypedExpr::Fn { .. } => {
+                    self.infer_fn(arguments, &[], body, kind, return_annotation, location)
+                }
+            }
+        } else {
+            self.infer_fn(arguments, &[], body, kind, return_annotation, location)
         }
     }
 
