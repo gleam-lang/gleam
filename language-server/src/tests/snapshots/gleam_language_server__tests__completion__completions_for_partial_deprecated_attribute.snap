@@ -1,0 +1,14 @@
+---
+source: language-server/src/tests/completion.rs
+expression: "@deprecated(\"This is a deprecated function\")\npub fn main() {}"
+---
+@dep|recated("This is a deprecated function")
+pub fn main() {}
+
+
+----- Completion content -----
+deprecated
+  kind:   Keyword
+  sort:   00_deprecated
+  edits:
+    [0:1-0:11]: "deprecated"
