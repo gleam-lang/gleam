@@ -24,7 +24,7 @@ ring = "0.17"
 # PEM -> DER conversion
 x509-parser = "0.18"
 # Protobuf runtime
-prost = "0.13.5"
+prost = "0.14.4"
 
 base16 = { workspace = true, features = ["alloc"] }
 clap = { workspace = true, features = ["derive"] }
