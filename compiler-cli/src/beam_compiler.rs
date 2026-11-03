@@ -100,6 +100,9 @@ impl BeamCompilerInstance {
 
         let mut process = std::process::Command::new("escript")
             .arg(escript_path)
+            .env_remove("ERL_AFLAGS")
+            .env_remove("ERL_FLAGS")
+            .env_remove("ERL_ZFLAGS")
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
             .spawn()
