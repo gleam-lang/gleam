@@ -91,15 +91,21 @@ expression: "\nlet my_string = \"hello \"\ncase my_string {\n    _ if my_string 
                                             start: 52,
                                             end: 61,
                                         },
-                                        type_: (),
                                         name: "my_string",
-                                        definition_location: SrcSpan {
-                                            start: 0,
-                                            end: 0,
-                                        },
-                                        origin: VariableOrigin {
-                                            syntax: Generated,
-                                            declaration: Generated,
+                                        constructor: ValueConstructor {
+                                            publicity: Private,
+                                            deprecation: NotDeprecated,
+                                            variant: LocalVariable {
+                                                location: SrcSpan {
+                                                    start: 52,
+                                                    end: 61,
+                                                },
+                                                origin: VariableOrigin {
+                                                    syntax: Generated,
+                                                    declaration: Generated,
+                                                },
+                                            },
+                                            type_: (),
                                         },
                                     },
                                     right: Constant(

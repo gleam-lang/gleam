@@ -213,6 +213,10 @@
 
   ([0xda157](https://github.com/0xda157))
 
+- The langauge server will now show proper hovers and support go-to-definition,
+  find-references and renaming for unqualified constants in clause guards.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Bug fixes
 
 - Fixed a bug where the language server "Generate variant" code action would

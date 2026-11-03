@@ -11,7 +11,7 @@ use crate::{
         float, int, string, unify,
     },
 };
-use ecow::EcoString;
+use ecow::{EcoString, string::ToEcoString};
 use src_span::SrcSpan;
 
 pub struct GuardTyper<'expression_typer, 'env, 'module> {
@@ -98,6 +98,7 @@ impl<'expression_typer, 'env, 'module> GuardTyper<'expression_typer, 'env, 'modu
                 label,
                 container,
                 index: _,
+                documentation: _,
                 type_: (),
             } => {
                 let container_location = container.location();
@@ -310,28 +311,17 @@ impl<'expression_typer, 'env, 'module> GuardTyper<'expression_typer, 'env, 'modu
                 .infer_value_constructor(&None, &name, &location, ValueUsage::Other)?;
 
         // We cannot support all values in guard expressions as the BEAM does not
-        let (definition_location, origin) = match &constructor.variant {
-            ValueConstructorVariant::LocalVariable { location, origin } => {
-                (*location, origin.clone())
-            }
-
+        match constructor.variant {
             ValueConstructorVariant::ModuleFn { .. } | ValueConstructorVariant::Record { .. } => {
-                return Err(Error::NonLocalClauseGuardVariable { location, name });
+                Err(Error::NonLocalClauseGuardVariable { location, name })
             }
-
-            ValueConstructorVariant::ModuleConstant { literal, .. } => {
-                let literal = literal.clone().with_location(location);
-                return Ok(ClauseGuard::Constant(literal));
-            }
-        };
-
-        Ok(ClauseGuard::Var {
-            location,
-            name,
-            origin,
-            type_: constructor.type_,
-            definition_location,
-        })
+            ValueConstructorVariant::LocalVariable { .. }
+            | ValueConstructorVariant::ModuleConstant { .. } => Ok(ClauseGuard::Var {
+                location,
+                name,
+                constructor,
+            }),
+        }
     }
 
     fn infer_guard_record_access(
@@ -346,7 +336,7 @@ impl<'expression_typer, 'env, 'module> GuardTyper<'expression_typer, 'env, 'modu
             index,
             label,
             type_,
-            documentation: _,
+            documentation,
         } = self.typer.infer_known_record_access(
             container_type,
             container.location(),
@@ -359,6 +349,7 @@ impl<'expression_typer, 'env, 'module> GuardTyper<'expression_typer, 'env, 'modu
             label,
             index: Some(index),
             label_location: location,
+            documentation,
             type_,
         })
     }
@@ -385,6 +376,9 @@ impl<'expression_typer, 'env, 'module> GuardTyper<'expression_typer, 'env, 'modu
                     constructor,
                 } = module_select
                 {
+                    let documentation = constructor
+                        .get_documentation()
+                        .map(|documentation| documentation.to_eco_string());
                     match constructor {
                         ModuleValueConstructor::Constant {
                             literal,
@@ -411,6 +405,7 @@ impl<'expression_typer, 'env, 'module> GuardTyper<'expression_typer, 'env, 'modu
                                 module_name,
                                 module_alias,
                                 literal,
+                                documentation,
                             })
                         }
 

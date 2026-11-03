@@ -418,11 +418,9 @@ pub trait Visit<'ast> {
         &mut self,
         location: &'ast SrcSpan,
         name: &'ast EcoString,
-        type_: &'ast Arc<Type>,
-        definition_location: &'ast SrcSpan,
-        origin: &'ast VariableOrigin,
+        constructor: &'ast ValueConstructor,
     ) {
-        visit_typed_clause_guard_var(self, location, name, type_, definition_location, origin);
+        visit_typed_clause_guard_var(self, location, name, constructor);
     }
 
     fn visit_typed_clause_guard_tuple_index(
@@ -442,8 +440,17 @@ pub trait Visit<'ast> {
         label: &'ast EcoString,
         type_: &'ast Arc<Type>,
         container: &'ast TypedClauseGuard,
+        documentation: &'ast Option<EcoString>,
     ) {
-        visit_typed_clause_guard_field_access(self, label_location, index, label, type_, container);
+        visit_typed_clause_guard_field_access(
+            self,
+            label_location,
+            index,
+            label,
+            type_,
+            container,
+            documentation,
+        );
     }
 
     #[expect(clippy::too_many_arguments)]
@@ -457,6 +464,7 @@ pub trait Visit<'ast> {
         module_name: &'ast EcoString,
         module_alias: &'ast EcoString,
         literal: &'ast TypedConstant,
+        documentation: &'ast Option<EcoString>,
     ) {
         visit_typed_clause_guard_module_select(
             self,
@@ -468,6 +476,7 @@ pub trait Visit<'ast> {
             module_name,
             module_alias,
             literal,
+            documentation,
         );
     }
 
@@ -1870,11 +1879,9 @@ where
         } => v.visit_typed_clause_guard(expression),
         super::ClauseGuard::Var {
             location,
-            type_,
             name,
-            definition_location,
-            origin,
-        } => v.visit_typed_clause_guard_var(location, name, type_, definition_location, origin),
+            constructor,
+        } => v.visit_typed_clause_guard_var(location, name, constructor),
         super::ClauseGuard::TupleIndex {
             location,
             index,
@@ -1887,8 +1894,16 @@ where
             label,
             type_,
             container,
+            documentation,
         } => {
-            v.visit_typed_clause_guard_field_access(label_location, index, label, type_, container);
+            v.visit_typed_clause_guard_field_access(
+                label_location,
+                index,
+                label,
+                type_,
+                container,
+                documentation,
+            );
         }
         super::ClauseGuard::ModuleSelect {
             location,
@@ -1899,6 +1914,7 @@ where
             module_name,
             module_alias,
             literal,
+            documentation,
         } => v.visit_typed_clause_guard_module_select(
             location,
             field_start,
@@ -1908,6 +1924,7 @@ where
             module_name,
             module_alias,
             literal,
+            documentation,
         ),
         super::ClauseGuard::Constant(constant) => v.visit_typed_constant(constant),
         super::ClauseGuard::Invalid { .. } => (),
@@ -1932,9 +1949,7 @@ pub fn visit_typed_clause_guard_var<'a, V>(
     _v: &mut V,
     _location: &'a SrcSpan,
     _name: &'a EcoString,
-    _type_: &'a Arc<Type>,
-    _definition_location: &'a SrcSpan,
-    _origin: &'a VariableOrigin,
+    _constructor: &'a ValueConstructor,
 ) where
     V: Visit<'a> + ?Sized,
 {
@@ -1959,6 +1974,7 @@ pub fn visit_typed_clause_guard_field_access<'a, V>(
     _label: &'a EcoString,
     _type_: &'a Arc<Type>,
     container: &'a TypedClauseGuard,
+    _documentation: &'a Option<EcoString>,
 ) where
     V: Visit<'a> + ?Sized,
 {
@@ -1976,6 +1992,7 @@ pub fn visit_typed_clause_guard_module_select<'a, V>(
     _module_name: &'a EcoString,
     _module_alias: &'a EcoString,
     _literal: &'a TypedConstant,
+    _documentation: &'a Option<EcoString>,
 ) where
     V: Visit<'a> + ?Sized,
 {

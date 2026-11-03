@@ -1553,7 +1553,9 @@ Unused labelled fields:
                     Some(hover_for_module(module, location, &lines, &this.hex_deps))
                 }
 
-                Located::ClauseGuard(guard) => Some(hover_for_clause_guard(guard, lines, module)),
+                Located::ClauseGuard(guard) => {
+                    Some(hover_for_clause_guard(guard, lines, module, &this.hex_deps))
+                }
 
                 Located::TypeVariable { .. } => None,
             })
@@ -2046,9 +2048,27 @@ fn hover_for_clause_guard(
     guard: &TypedClauseGuard,
     line_numbers: LineNumbers,
     module: &Module,
+    hex_deps: &HashSet<EcoString>,
 ) -> Hover {
+    let documentation = guard.get_documentation().unwrap_or_default();
+
+    let link_section = get_clause_guard_qualified_name(guard)
+        .and_then(|(module_name, name)| {
+            get_hexdocs_link_section(module_name, name, &module.ast, hex_deps)
+        })
+        .unwrap_or_default();
     let type_ = Printer::new(&module.ast.names).print_type(&guard.type_());
-    let contents = format!("```gleam\n{type_}\n```");
+    let description = [documentation, &link_section]
+        .iter()
+        .filter(|string| !string.is_empty())
+        .join("\n\n");
+    let contents = format!(
+        "```gleam
+{type_}
+```
+{description}"
+    );
+
     Hover {
         contents: Contents::MarkedString(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(guard.location(), &line_numbers)),
@@ -2473,6 +2493,37 @@ fn get_expr_qualified_name(expression: &TypedExpr) -> Option<(&EcoString, &EcoSt
     }
 }
 
+fn get_clause_guard_qualified_name(guard: &TypedClauseGuard) -> Option<(&EcoString, &EcoString)> {
+    match guard {
+        ast::ClauseGuard::Var {
+            name, constructor, ..
+        } if constructor.publicity.is_importable() => match &constructor.variant {
+            ValueConstructorVariant::ModuleFn {
+                module: module_name,
+                ..
+            } => Some((module_name, name)),
+
+            ValueConstructorVariant::ModuleConstant {
+                module: module_name,
+                ..
+            } => Some((module_name, name)),
+
+            ValueConstructorVariant::LocalVariable { .. }
+            | ValueConstructorVariant::Record { .. } => None,
+        },
+        ast::ClauseGuard::ModuleSelect {
+            label, module_name, ..
+        } => Some((module_name, label)),
+        ast::ClauseGuard::Block { .. }
+        | ast::ClauseGuard::BinaryOperator { .. }
+        | ast::ClauseGuard::Not { .. }
+        | ast::ClauseGuard::TupleIndex { .. }
+        | ast::ClauseGuard::FieldAccess { .. }
+        | ast::ClauseGuard::Constant(_)
+        | ast::ClauseGuard::Invalid { .. }
+        | ast::ClauseGuard::Var { .. } => None,
+    }
+}
 fn format_hexdocs_link_section(
     package_name: &str,
     module_name: &str,

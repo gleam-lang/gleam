@@ -3206,6 +3206,15 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
                 ]
             }
 
+            ClauseGuard::Var {
+                constructor:
+                    ValueConstructor {
+                        variant: ValueConstructorVariant::ModuleConstant { literal, .. },
+                        ..
+                    },
+                ..
+            } => self.guard_constant_expression(arena, literal),
+
             ClauseGuard::Var { name, .. } => self.local_var(name).to_doc(arena),
 
             ClauseGuard::TupleIndex { tuple, index, .. } => {
