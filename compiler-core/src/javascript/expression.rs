@@ -170,7 +170,9 @@ impl<'ast> visit::Visit<'ast> for FunctionParameterReferences<'_> {
 
         // If we are inside a function expression, we have to assume that any argument
         // captured might escape the current scope or loop iteration.
-        self.inside_function_expression |= matches!(expression, TypedExpr::Fn { .. });
+        if let TypedExpr::Fn { .. } = expression {
+            self.inside_function_expression = true;
+        }
 
         // If the expression we're visiting is a reference to one of our
         // parameters, record it as visited.
@@ -199,9 +201,9 @@ impl<'ast> visit::Visit<'ast> for FunctionParameterReferences<'_> {
             for (index, argument) in arguments.iter().enumerate() {
                 self.visit_typed_expr(&argument.value);
 
-                // If a parameter is just passed through unchanged, we don't need
-                // to track it as "reassigned" or mutated
-                if !is_unchanged_argument(self.function_name, &argument.value, index) {
+                // If the original parameter is passed through in the same position,
+                // we don't need to track it as "reassigned" or mutated.
+                if !argument_is_original_parameter(self.function_name, &argument.value, index) {
                     // For all others, we collect them here so that when we visit
                     // the next argument expression up above and encounter it
                     // again, we can mark it as needing a loop binding.
@@ -227,21 +229,24 @@ impl<'ast> visit::Visit<'ast> for FunctionParameterReferences<'_> {
         visit::visit_typed_clause_guard(self, guard);
     }
 
-    fn visit_typed_pattern_bit_array_size(&mut self, size: &'ast TypedBitArraySize) {
-        if let BitArraySize::Variable {
-            constructor: Some(constructor),
-            ..
-        } = size
+    fn visit_typed_bit_array_size_variable(
+        &mut self,
+        _location: &'ast SrcSpan,
+        _name: &'ast EcoString,
+        constructor: &'ast Option<Box<ValueConstructor>>,
+        _type_: &'ast Arc<Type>,
+    ) {
+        if let Some(constructor) = constructor
             && let ValueConstructorVariant::LocalVariable { origin, .. } = &constructor.variant
             && let Some(index) = function_parameter_index(self.function_name, origin)
         {
             self.record_parameter_access(index);
         }
-
-        visit::visit_typed_pattern_bit_array_size(self, size);
     }
 }
 
+/// Returns the parameter index for the variable pointed at by the given origin,
+/// if that variable is in fact a parameter for the given function.
 fn function_parameter_index(function_name: &EcoString, origin: &VariableOrigin) -> Option<usize> {
     match &origin.declaration {
         VariableDeclaration::FunctionParameter {
@@ -257,6 +262,8 @@ fn function_parameter_index(function_name: &EcoString, origin: &VariableOrigin) 
     }
 }
 
+/// Returns the parameter index for the variable pointed at by the given expression,
+/// if that variable is in fact a parameter for the given function.
 fn expression_parameter_index(function_name: &EcoString, expression: &TypedExpr) -> Option<usize> {
     let (constructor, _) = expression.var_constructor()?;
     match &constructor.variant {
@@ -269,7 +276,11 @@ fn expression_parameter_index(function_name: &EcoString, expression: &TypedExpr)
     }
 }
 
-fn is_unchanged_argument(function_name: &EcoString, argument: &TypedExpr, index: usize) -> bool {
+fn argument_is_original_parameter(
+    function_name: &EcoString,
+    argument: &TypedExpr,
+    index: usize,
+) -> bool {
     expression_parameter_index(function_name, argument) == Some(index)
 }
 
@@ -2020,8 +2031,9 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
         let mut assignments = Vec::with_capacity(arguments.len());
 
         for (index, argument) in arguments.iter().enumerate() {
-            // If an argument is not changed, we don't need to re-assign it.
-            if is_unchanged_argument(&self.function_name, &argument.value, index) {
+            // If the original parameter is passed through in the same position, we don't
+            // need to reassign it. This skips dummy assignments, like `wibble = wibble;`.
+            if argument_is_original_parameter(&self.function_name, &argument.value, index) {
                 continue;
             }
 
