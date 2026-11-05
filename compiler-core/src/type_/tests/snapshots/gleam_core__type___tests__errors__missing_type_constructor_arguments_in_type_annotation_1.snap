@@ -12,4 +12,4 @@ error: Incorrect arity
 1 │ pub fn main() -> Result() {}
   │                  ^^^^^^^^ Expected 2 type arguments, got 0
 
-`Result` requires 2 type arguments but none where provided.
+`Result` requires 2 type arguments but none were provided.
