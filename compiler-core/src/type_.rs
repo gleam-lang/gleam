@@ -731,7 +731,7 @@ pub enum ValueConstructorVariant {
         location: SrcSpan,
         module: EcoString,
         name: EcoString,
-        literal: Constant<Arc<Type>>,
+        literal: Arc<Constant<Arc<Type>>>,
         implementations: Implementations,
     },
 
@@ -951,7 +951,7 @@ pub enum ModuleValueConstructor {
     },
 
     Constant {
-        literal: TypedConstant,
+        literal: Arc<TypedConstant>,
         location: SrcSpan,
         documentation: Option<EcoString>,
     },

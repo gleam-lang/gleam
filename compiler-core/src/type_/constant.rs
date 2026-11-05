@@ -190,7 +190,9 @@ impl<'expression_typer, 'env, 'module> ConstantTyper<'expression_typer, 'env, 'm
                         constructor: Some(value_constructor),
                         ..
                     } => match &value_constructor.variant {
-                        ValueConstructorVariant::ModuleConstant { literal, .. } => literal.clone(),
+                        ValueConstructorVariant::ModuleConstant { literal, .. } => {
+                            literal.as_ref().clone()
+                        }
                         ValueConstructorVariant::LocalVariable { .. }
                         | ValueConstructorVariant::ModuleFn { .. }
                         | ValueConstructorVariant::Record { .. } => typed_record,
