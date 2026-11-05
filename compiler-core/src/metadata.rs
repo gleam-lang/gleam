@@ -235,7 +235,7 @@ impl RemapIds {
                 location,
                 module,
                 name,
-                literal: self.constant(literal),
+                literal: Arc::new(self.constant(Arc::unwrap_or_clone(literal))),
                 implementations,
             },
             ValueConstructorVariant::ModuleFn {

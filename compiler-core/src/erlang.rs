@@ -3547,7 +3547,7 @@ fn how_to_call<'a>(function: &'a TypedExpr) -> FunctionCall<'a> {
                 if let Constant::Var {
                     constructor: Some(constructor),
                     ..
-                } = literal
+                } = literal.as_ref()
                     && let ValueConstructorVariant::ModuleFn {
                         external_erlang: Some((module, name)),
                         ..
