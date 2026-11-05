@@ -1,0 +1,39 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub type Expected =\n  List(Int)\n\npub type Given =\n  List(String)\n\npub fn main(given: Given) {\n  let expected: Expected = given\n}\n"
+---
+----- SOURCE CODE
+
+pub type Expected =
+  List(Int)
+
+pub type Given =
+  List(String)
+
+pub fn main(given: Given) {
+  let expected: Expected = given
+}
+
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:9:28
+  │
+9 │   let expected: Expected = given
+  │                            ^^^^^
+
+Expected type:
+
+    Expected
+
+Found type:
+
+    Given
+
+Hint: The expected type expands to:
+
+    List(Int)
+
+The found type expands to:
+
+    List(String)
