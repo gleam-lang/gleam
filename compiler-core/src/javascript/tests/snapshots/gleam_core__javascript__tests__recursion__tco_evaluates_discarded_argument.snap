@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/javascript/tests/recursion.rs
+expression: "\n@external(javascript, \"utils\", \"observe\")\nfn observe(x: Int) -> Int\n\npub fn main(x, _) {\n  case x {\n    0 -> Nil\n    _ -> main(x - 1, observe(x))\n  }\n}\n"
+---
+----- SOURCE CODE
+
+@external(javascript, "utils", "observe")
+fn observe(x: Int) -> Int
+
+pub fn main(x, _) {
+  case x {
+    0 -> Nil
+    _ -> main(x - 1, observe(x))
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { observe } from "utils";
+
+export function main(loop$x, _) {
+  while (true) {
+    let x = loop$x;
+    if (x === 0) {
+      return undefined;
+    } else {
+      loop$x = x - 1;
+      observe(x);
+    }
+  }
+}

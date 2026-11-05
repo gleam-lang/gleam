@@ -15,16 +15,14 @@ pub fn count(xs, n) {
 ----- COMPILED JAVASCRIPT
 import { Empty as $Empty } from "../gleam.mjs";
 
-export function count(loop$xs, loop$n) {
+export function count(xs, n) {
   while (true) {
-    let xs = loop$xs;
-    let n = loop$n;
     if (xs instanceof $Empty) {
       return n;
     } else {
       let xs$1 = xs.tail;
-      loop$xs = xs$1;
-      loop$n = n + 1;
+      xs = xs$1;
+      n = n + 1;
     }
   }
 }
