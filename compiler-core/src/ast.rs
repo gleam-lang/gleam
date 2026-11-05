@@ -1443,7 +1443,7 @@ pub enum OperatorKind {
     BooleanLogic,
     Equality,
     IntComparison,
-    FLoatComparison,
+    FloatComparison,
     IntMath,
     FloatMath,
     StringConcatenation,
@@ -1519,7 +1519,7 @@ impl BinOp {
                 OperatorKind::IntComparison
             }
             Self::LtFloat | Self::LtEqFloat | Self::GtEqFloat | Self::GtFloat => {
-                OperatorKind::FLoatComparison
+                OperatorKind::FloatComparison
             }
             Self::AddInt | Self::SubInt | Self::MultInt | Self::RemainderInt | Self::DivInt => {
                 OperatorKind::IntMath
