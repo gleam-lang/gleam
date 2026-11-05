@@ -477,7 +477,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             variant: ValueConstructorVariant::ModuleConstant {
                 documentation: doc.as_ref().map(|(_, doc)| doc.clone()),
                 location,
-                literal: typed_expr.clone(),
+                literal: Arc::new(typed_expr.clone()),
                 module: self.module_name.clone(),
                 name: name.clone(),
                 implementations,
