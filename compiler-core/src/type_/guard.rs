@@ -12,8 +12,8 @@ use crate::{
     },
 };
 use ecow::EcoString;
-use std::sync::Arc;
 use src_span::SrcSpan;
+use std::sync::Arc;
 
 pub struct GuardTyper<'expression_typer, 'env, 'module> {
     typer: &'expression_typer mut ExprTyper<'env, 'module>,
