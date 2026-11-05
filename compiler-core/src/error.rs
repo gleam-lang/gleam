@@ -3444,7 +3444,7 @@ But function expects:
             };
             let text = wrap_format!(
                 "`{name}` requires {expected} \
-but {given} where provided."
+but {given} were provided."
             );
             Diagnostic {
                 title: "Incorrect arity".into(),

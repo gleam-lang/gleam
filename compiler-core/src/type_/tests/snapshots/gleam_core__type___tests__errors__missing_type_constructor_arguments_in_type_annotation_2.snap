@@ -14,4 +14,4 @@ error: Incorrect arity
 2 │   let a: Result() = todo
   │          ^^^^^^^^ Expected 2 type arguments, got 0
 
-`Result` requires 2 type arguments but none where provided.
+`Result` requires 2 type arguments but none were provided.

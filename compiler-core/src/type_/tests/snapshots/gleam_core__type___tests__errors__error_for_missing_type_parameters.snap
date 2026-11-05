@@ -18,4 +18,4 @@ error: Incorrect arity
 5 │   Wobble(Wibble)
   │          ^^^^^^ Expected 1 type argument, got 0
 
-`Wibble` requires 1 type argument but none where provided.
+`Wibble` requires 1 type argument but none were provided.

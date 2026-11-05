@@ -12,4 +12,4 @@ error: Incorrect arity
 1 │ fn go(x: List(a, b)) -> Int { 1 }
   │          ^^^^^^^^^^ Expected 1 type argument, got 2
 
-`List` requires 1 type argument but 2 where provided.
+`List` requires 1 type argument but 2 were provided.

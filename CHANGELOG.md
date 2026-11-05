@@ -286,6 +286,9 @@
   in between a function and its documentation.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a typo in a compiler error message for missing type arguments.
+  ([Tomas Vemola](https://github.com/vemolista))
+
 ## v1.19.2 - 2026-10-12
 
 ### Bug fixes
