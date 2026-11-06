@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/version_bump/tests.rs
+expression: bump
+---
+-- BEFORE
+---- the_module
+pub type Wibble(a) { Wibble(a) }
+
+-- AFTER
+---- the_module
+pub type Wibble(a, b) { Wibble(a) }
+
+-- MAJOR
+
+== the_module ==
+- pub type Wibble(a)
++ pub type Wibble(a, b)

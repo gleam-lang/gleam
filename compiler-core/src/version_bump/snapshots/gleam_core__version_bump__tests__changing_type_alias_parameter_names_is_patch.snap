@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/version_bump/tests.rs
+expression: bump
+---
+-- BEFORE
+---- the_module
+pub type OkOrError(a, b) = Result(a, b)
+
+-- AFTER
+---- the_module
+pub type OkOrError(ok, error) = Result(ok, error)
+
+-- PATCH

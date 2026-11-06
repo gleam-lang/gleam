@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/version_bump/tests.rs
+expression: bump
+---
+-- BEFORE
+---- the_module
+
+pub opaque type Wibble {
+  Wibble(int: Int, string: String)
+}
+
+-- AFTER
+---- the_module
+
+pub type Wibble {
+  Wibble(Int, String)
+}
+
+-- MINOR
+
+== the_module ==
+- pub type Wibble
++ pub type Wibble {
++   Wibble(Int, String)
++ }

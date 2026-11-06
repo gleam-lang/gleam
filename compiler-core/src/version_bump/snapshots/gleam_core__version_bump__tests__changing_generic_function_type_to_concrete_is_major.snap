@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/version_bump/tests.rs
+expression: bump
+---
+-- BEFORE
+---- the_module
+pub fn identity(x: a) { x }
+
+-- AFTER
+---- the_module
+pub fn identity(x: Int) { x }
+
+-- MAJOR
+
+== the_module ==
+- pub fn identity(a) -> a
++ pub fn identity(Int) -> Int
