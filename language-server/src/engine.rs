@@ -42,7 +42,7 @@ use crate::{
     code_action::{
         ConvertIntToDifferentBase, DiscardUnusedVariable, RemoveRedundantListPrepend,
         RemoveRedundantRecordUpdate, ReplaceUnderscoreWithType, code_action_fix_deprecated_pipe,
-        code_action_undiscard_value, type_errors_for_module,
+        code_action_undiscard_value, extract_record, type_errors_for_module,
     },
     reference::{
         find_echo_references, find_echo_references_in_module, find_module_references_in_module,
@@ -572,6 +572,7 @@ where
                 ConvertBetweenDocAndRegularComment::new(module, &lines, &params).code_actions(),
             );
             actions.extend(ConvertIntToDifferentBase::new(module, &lines, &params).code_actions());
+            extract_record(module, &lines, &params, &mut actions);
 
             actions.sort_by_key(|one| {
                 let preferred_key = if one.is_preferred == Some(true) { 0 } else { 1 };

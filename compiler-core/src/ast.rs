@@ -2030,7 +2030,7 @@ where
         if self.uses_label_shorthand() {
             LabelSyntax::Shorthand
         } else {
-            LabelSyntax::Longhand
+            LabelSyntax::Argument
         }
     }
 }
@@ -2086,7 +2086,7 @@ impl<A: HasLocation> RecordUpdateArg<A> {
         if self.uses_label_shorthand() {
             LabelSyntax::Shorthand
         } else {
-            LabelSyntax::Longhand
+            LabelSyntax::Argument
         }
     }
 }
