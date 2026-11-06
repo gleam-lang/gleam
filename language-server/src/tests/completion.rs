@@ -2790,3 +2790,88 @@ pub type Wibble {
     );
     insta::assert_snapshot!(insta::internals::AutoName, output, code);
 }
+fn attribute_completion_items(src: &str, position: Position) -> Vec<CompletionItem> {
+    // Compile valid code before requesting completions for an incomplete attribute.
+    TestProject::for_source("pub fn main() {}").at(position, |engine, params, _src| {
+        engine
+            .completion(params, src.into())
+            .result
+            .unwrap()
+            .unwrap_or_default()
+    })
+}
+
+#[test]
+fn completions_for_attribute_names() {
+    let code = "@";
+    let position = Position::new(0, 1);
+
+    let mut items = attribute_completion_items(code, position);
+    items.sort_by(|a, b| a.label.cmp(&b.label));
+
+    let output = format!(
+        "{}\n\n----- Completion content -----\n{}",
+        show_complete(code, position),
+        format_completion_results(items)
+    );
+    insta::assert_snapshot!(insta::internals::AutoName, output, code);
+}
+
+#[test]
+fn completions_for_attribute_names_after_indentation() {
+    let code = "  @\npub fn main() {}";
+    let position = Position::new(0, 3);
+
+    let mut items = attribute_completion_items(code, position);
+    items.sort_by(|a, b| a.label.cmp(&b.label));
+
+    let output = format!(
+        "{}\n\n----- Completion content -----\n{}",
+        show_complete(code, position),
+        format_completion_results(items)
+    );
+    insta::assert_snapshot!(insta::internals::AutoName, output, code);
+}
+
+#[test]
+fn completions_for_attribute_names_after_newline() {
+    let code = "\n@\npub fn main() {}";
+    let position = Position::new(1, 1);
+
+    let mut items = attribute_completion_items(code, position);
+    items.sort_by(|a, b| a.label.cmp(&b.label));
+
+    let output = format!(
+        "{}\n\n----- Completion content -----\n{}",
+        show_complete(code, position),
+        format_completion_results(items)
+    );
+    insta::assert_snapshot!(insta::internals::AutoName, output, code);
+}
+
+#[test]
+fn completions_for_partial_deprecated_attribute() {
+    let code = "@deprecated(\"This is a deprecated function\")\npub fn main() {}";
+    let position = Position::new(0, 4);
+
+    // @dep|recated
+    assert_completion!(TestProject::for_source(code), position);
+}
+
+#[test]
+fn completions_for_partial_external_attribute() {
+    let code = "@external(erlang, \"module\", \"function\")\npub fn main() {}";
+    let position = Position::new(0, 4);
+
+    // @ext|ernal
+    assert_completion!(TestProject::for_source(code), position);
+}
+
+#[test]
+fn completions_for_partial_internal_attribute() {
+    let code = "@internal\npub fn main() {}";
+    let position = Position::new(0, 4);
+
+    // @int|ernal
+    assert_completion!(TestProject::for_source(code), position);
+}

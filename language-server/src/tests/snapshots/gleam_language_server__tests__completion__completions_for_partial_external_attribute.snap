@@ -1,0 +1,14 @@
+---
+source: language-server/src/tests/completion.rs
+expression: "@external(erlang, \"module\", \"function\")\npub fn main() {}"
+---
+@ext|ernal(erlang, "module", "function")
+pub fn main() {}
+
+
+----- Completion content -----
+external
+  kind:   Keyword
+  sort:   00_external
+  edits:
+    [0:1-0:9]: "external"
