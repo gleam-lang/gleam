@@ -292,3 +292,7 @@ pub fn package_information(paths: &ProjectPaths, out: Option<Utf8PathBuf>) -> Re
     let information = docs::package_information_as_json(config);
     write_scoped_path_or_stdout(paths, out, information)
 }
+
+pub fn system_information() -> Result<()> {
+    Ok(())
+}
