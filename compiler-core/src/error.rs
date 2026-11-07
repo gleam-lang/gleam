@@ -310,10 +310,10 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
         invalid_runtime: Runtime,
     },
 
-    #[error("package downloading failed: {error}")]
-    DownloadPackageError {
-        package_name: String,
-        package_version: String,
+    #[error("failed to download {name}@{version} from Hex: {error}")]
+    FailedToDownloadPackageVersionFromHex {
+        name: String,
+        version: String,
         error: String,
     },
 
@@ -463,6 +463,12 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
 
     #[error("the documentation page {path} is outside the package directory")]
     DocumentationPageOutsidePackage { path: Utf8PathBuf },
+
+    #[error("could not find {package}@{version} in the Hex repo")]
+    CouldNotFindPackageVersionInHexRepo {
+        package: EcoString,
+        version: Version,
+    },
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, Copy)]
@@ -2285,9 +2291,9 @@ Fix the warnings and try again."
                 }]
             }
 
-            Error::DownloadPackageError {
-                package_name,
-                package_version,
+            Error::FailedToDownloadPackageVersionFromHex {
+                name: package_name,
+                version: package_version,
                 error,
             } => {
                 let text = format!(
@@ -2748,6 +2754,17 @@ All documentation pages files must be inside the package itself."
                     hint: None,
                 }]
             }
+
+            Error::CouldNotFindPackageVersionInHexRepo { package, version } => vec![Diagnostic {
+                title: "Package version not found".into(),
+                text: wrap_format!(
+                    "Version {version} of the package {package} could \
+not be found in the Hex package repository."
+                ),
+                hint: Some("Run 'gleam hex authenticate' to log in again.".into()),
+                level: Level::Error,
+                location: None,
+            }],
         }
     }
 }

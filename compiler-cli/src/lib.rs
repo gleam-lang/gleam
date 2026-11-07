@@ -96,6 +96,7 @@ use clap::{
 use ecow::EcoString;
 use gleam_core::{
     analyse::TargetSupport,
+    audit::AuditOutputFormat,
     build::{Codegen, Compile, ErlangOutput, Mode, NullTelemetry, Options, Runtime, Target},
     hex::RetirementReason,
     paths::ProjectPaths,
@@ -451,10 +452,17 @@ pub enum Command {
     /// Export something useful from the Gleam project
     #[command(subcommand)]
     Export(ExportTarget),
+
+    /// Check for security advisories and retirements
+    Audit {
+        /// The format for showing the print the information using
+        #[arg(long, default_value = "text")]
+        format: AuditOutputFormat,
+    },
 }
 
 impl Command {
-    pub fn run(self, directory: Utf8PathBuf) -> Result<(), Error> {
+    pub fn run(self, directory: Utf8PathBuf) -> Result<i32, Error> {
         match self {
             Self::Build {
                 target,
@@ -462,69 +470,72 @@ impl Command {
                 no_print_progress,
             } => {
                 let paths = find_project_paths(directory)?;
-                command_build(&paths, target, warnings_as_errors, no_print_progress)
+                command_build(&paths, target, warnings_as_errors, no_print_progress).map(|()| 0)
             }
 
             Self::Check { target } => {
                 let paths = find_project_paths(directory)?;
-                command_check(&paths, target)
+                command_check(&paths, target).map(|()| 0)
             }
 
             Self::Docs(Docs::Build { open, target }) => {
                 let paths = find_project_paths(directory)?;
-                docs::build(&paths, docs::BuildOptions { open, target })
+                docs::build(&paths, docs::BuildOptions { open, target }).map(|()| 0)
             }
 
             Self::Docs(Docs::Publish) => {
                 let paths = find_project_paths(directory)?;
-                docs::publish(&paths)
+                docs::publish(&paths).map(|()| 0)
             }
 
-            Self::Docs(Docs::Remove { package, version }) => docs::remove(package, version),
-
+            Self::Docs(Docs::Remove { package, version }) => {
+                docs::remove(package, version).map(|()| 0)
+            }
             Self::Format {
                 stdin,
                 files,
                 check,
-            } => format::run(stdin, check, files),
-
+            } => format::run(stdin, check, files).map(|()| 0),
             Self::Fix => {
                 let paths = find_project_paths(directory)?;
-                fix::run(&paths)
+                fix::run(&paths).map(|()| 0)
             }
 
             Self::Deps(Dependencies::List) => {
                 let paths = find_project_paths(directory)?;
-                dependencies::list(&paths)
+                dependencies::list(&paths).map(|()| 0)
             }
 
             Self::Deps(Dependencies::Download) => {
                 let paths = find_project_paths(directory)?;
-                download_dependencies(&paths)
+                download_dependencies(&paths).map(|()| 0)
             }
 
             Self::Deps(Dependencies::Outdated) => {
                 let paths = find_project_paths(directory)?;
-                dependencies::outdated(&paths)
+                dependencies::outdated(&paths).map(|()| 0)
+            }
+
+            Self::Audit { format } => {
+                let paths = find_project_paths(directory)?;
+                dependencies::audit(&paths, format)
             }
 
             Self::Deps(Dependencies::Update(options)) => {
                 let paths = find_project_paths(directory)?;
-                dependencies::update(&paths, options.packages)
+                dependencies::update(&paths, options.packages).map(|()| 0)
             }
 
             Self::Deps(Dependencies::Tree(options)) => {
                 let paths = find_project_paths(directory)?;
-                dependencies::tree(&paths, options)
+                dependencies::tree(&paths, options).map(|()| 0)
             }
 
-            Self::Hex(Hex::Authenticate) => hex::authenticate(),
-
-            Self::New(options) => new::create(options, COMPILER_VERSION),
-
+            Self::Hex(Hex::Authenticate) => hex::authenticate().map(|()| 0),
+            Self::New(options) => new::create(options, COMPILER_VERSION).map(|()| 0),
             Self::Shell => {
                 let paths = find_project_paths(directory)?;
-                shell::command(&paths)
+                shell::command(&paths).map(|()| 0)
             }
 
             Self::Run {
@@ -544,6 +555,7 @@ impl Command {
                     run::Which::Src,
                     no_print_progress,
                 )
+                .map(|()| 0)
             }
 
             Self::Test {
@@ -561,6 +573,7 @@ impl Command {
                     run::Which::Test,
                     false,
                 )
+                .map(|()| 0)
             }
 
             Self::Dev {
@@ -579,18 +592,18 @@ impl Command {
                     run::Which::Dev,
                     no_print_progress,
                 )
+                .map(|()| 0)
             }
 
-            Self::CompilePackage(opts) => compile_package::command(opts),
-
+            Self::CompilePackage(opts) => compile_package::command(opts).map(|()| 0),
             Self::Publish { replace, yes } => {
                 let paths = find_project_paths(directory)?;
-                publish::command(&paths, replace, yes)
+                publish::command(&paths, replace, yes).map(|()| 0)
             }
 
             Self::PrintConfig => {
                 let paths = find_project_paths(directory)?;
-                print_config(&paths)
+                print_config(&paths).map(|()| 0)
             }
 
             Self::Hex(Hex::Retire {
@@ -598,73 +611,70 @@ impl Command {
                 version,
                 reason,
                 message,
-            }) => hex::retire(package, version, reason, message),
-
-            Self::Hex(Hex::Unretire { package, version }) => hex::unretire(package, version),
-
+            }) => hex::retire(package, version, reason, message).map(|()| 0),
+            Self::Hex(Hex::Unretire { package, version }) => {
+                hex::unretire(package, version).map(|()| 0)
+            }
             Self::Hex(Hex::Revert { package, version }) => {
                 let paths = find_project_paths(directory)?;
-                hex::revert(&paths, package, version)
+                hex::revert(&paths, package, version).map(|()| 0)
             }
 
             Self::Hex(Hex::Owner(Owner::Add {
                 package,
                 username_or_email,
                 level,
-            })) => owner::add(package, username_or_email, level),
-
+            })) => owner::add(package, username_or_email, level).map(|()| 0),
             Self::Hex(Hex::Owner(Owner::Transfer {
                 package,
                 username_or_email,
-            })) => owner::transfer(package, username_or_email),
-
+            })) => owner::transfer(package, username_or_email).map(|()| 0),
             Self::Add { packages, dev } => {
                 let paths = find_project_paths(directory)?;
-                add::command(&paths, packages, dev)
+                add::command(&paths, packages, dev).map(|()| 0)
             }
 
             Self::Remove { packages } => {
                 let paths = find_project_paths(directory)?;
-                remove::command(&paths, packages)
+                remove::command(&paths, packages).map(|()| 0)
             }
 
             Self::Update(options) => {
                 let paths = find_project_paths(directory)?;
-                dependencies::update(&paths, options.packages)
+                dependencies::update(&paths, options.packages).map(|()| 0)
             }
 
             Self::Clean => {
                 let paths = find_project_paths(directory)?;
-                clean(&paths)
+                clean(&paths).map(|()| 0)
             }
 
-            Self::LanguageServer => lsp::main(),
-
+            Self::LanguageServer => lsp::main().map(|()| 0),
             Self::Export(ExportTarget::ErlangShipment) => {
                 let paths = find_project_paths(directory)?;
-                export::erlang_shipment(&paths)
+                export::erlang_shipment(&paths).map(|()| 0)
             }
             Self::Export(ExportTarget::Escript) => {
                 let paths = find_project_paths(directory)?;
-                export::escript(&paths)
+                export::escript(&paths).map(|()| 0)
             }
             Self::Export(ExportTarget::HexTarball) => {
                 let paths = find_project_paths(directory)?;
-                export::hex_tarball(&paths)
+                export::hex_tarball(&paths).map(|()| 0)
             }
             Self::Export(ExportTarget::JavaScriptPrelude { output }) => {
-                export::javascript_prelude(output)
+                export::javascript_prelude(output).map(|()| 0)
             }
             Self::Export(ExportTarget::TypeScriptPrelude { output }) => {
-                export::typescript_prelude(output)
+                export::typescript_prelude(output).map(|()| 0)
             }
             Self::Export(ExportTarget::PackageInterface { output }) => {
                 let paths = find_project_paths(directory)?;
-                export::package_interface(&paths, output)
+                export::package_interface(&paths, output).map(|()| 0)
             }
             Self::Export(ExportTarget::PackageInformation { output }) => {
                 let paths = find_project_paths(directory)?;
-                export::package_information(&paths, output)
+                export::package_information(&paths, output).map(|()| 0)
             }
         }
     }
@@ -1027,15 +1037,16 @@ pub fn main() {
     let result = get_current_directory()
         .and_then(|working_directory| Command::parse().run(working_directory));
     match result {
-        Ok(_) => {
+        Ok(code) => {
             tracing::info!("Successfully completed");
+            std::process::exit(code);
         }
         Err(error) => {
             tracing::error!(error = ?error, "Failed");
             let mut buffer = stderr.buffer();
             error.pretty(&mut buffer);
             stderr.print(&buffer).expect("Final result error writing");
-            std::process::exit(1);
+            std::process::exit(127);
         }
     }
 }
