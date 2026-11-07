@@ -1,0 +1,31 @@
+---
+source: test-package-compiler/src/generated_tests.rs
+expression: "./cases/erlang_nested_qualified_constant"
+---
+//// /out/lib/the_package/_gleam_artefacts/one@two.abstr
+<349 byte binary>
+
+//// /out/lib/the_package/_gleam_artefacts/one@two.cache
+<.cache binary>
+
+//// /out/lib/the_package/_gleam_artefacts/one@two.cache_meta
+<40 byte binary>
+
+//// /out/lib/the_package/_gleam_artefacts/two.abstr
+<285 byte binary>
+
+//// /out/lib/the_package/_gleam_artefacts/two.cache
+<.cache binary>
+
+//// /out/lib/the_package/_gleam_artefacts/two.cache_meta
+<71 byte binary>
+
+//// /out/lib/the_package/ebin/importy.app
+{application, importy, [
+    {vsn, "0.1.0"},
+    {applications, []},
+    {description, ""},
+    {modules, [one@two,
+               two]},
+    {registered, []}
+]}.
