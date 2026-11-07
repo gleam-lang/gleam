@@ -588,3 +588,23 @@ pub const wibble = Wibble(1.0, 1.0)
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/6498
+#[test]
+fn capture_of_module_function_with_labelled_argument() {
+    assert_module_infer!(
+        (
+            "other",
+            "pub fn greet(name: String, loud loud: Bool) -> String { name }"
+        ),
+        "
+import other
+
+pub fn main() {
+  let greet = other.greet(_, loud: True)
+  greet(\"Lucy\")
+}
+",
+        vec![("main", "fn() -> String")]
+    );
+}

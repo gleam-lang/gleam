@@ -1100,7 +1100,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // ```
         //
         // However, if `<function>` is an `UntypedExpr::Call`, `UntypedExpr::TupleIndex`,
-        // or `UntypedExpr::FieldAccess`, we want to capture the function returned by
+        // or a record `UntypedExpr::FieldAccess`, we want to capture the function returned by
         // that expression. To avoid re-evaluating `<function>` on every call, it is
         // compiled into a block that binds the result to a temporary variable first:
         // ```
@@ -1122,6 +1122,18 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }) = body.first()
         {
             match &**fun {
+                // A module access like `other.wibble(_)` is captured like a
+                // normal function to retain info like argument labels.
+                UntypedExpr::FieldAccess { container, .. }
+                    if matches!(
+                        &**container,
+                        UntypedExpr::Var { name, .. }
+                            if !self.environment.scope.contains_key(name)
+                    ) =>
+                {
+                    self.infer_fn(arguments, &[], body, kind, return_annotation, location)
+                }
+
                 UntypedExpr::Call { .. }
                 | UntypedExpr::TupleIndex { .. }
                 | UntypedExpr::FieldAccess { .. } => {
