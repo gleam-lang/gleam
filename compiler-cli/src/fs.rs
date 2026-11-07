@@ -114,6 +114,20 @@ impl ProjectIO {
         }
         Ok(())
     }
+
+    /// Returns the OTP version of the BEAM compiler instance, starting it if
+    /// it is not already running.
+    pub(crate) fn otp_version(&self) -> Result<u64, Error> {
+        self.initialise_beam_compiler()?;
+        let guard = self
+            .beam_compiler
+            .lock()
+            .expect("could not lock beam_compiler");
+        Ok(guard
+            .as_ref()
+            .expect("BEAM compiler should be running after initialisation")
+            .otp_version)
+    }
 }
 
 impl FileSystemReader for ProjectIO {

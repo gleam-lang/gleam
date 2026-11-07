@@ -31,7 +31,13 @@ pub fn download_dependencies(paths: &ProjectPaths, telemetry: impl Telemetry) ->
 }
 
 pub fn main(paths: &ProjectPaths, options: Options, manifest: Manifest) -> Result<Built> {
-    main_with_warnings(paths, options, manifest, Rc::new(ConsoleWarningEmitter))
+    main_with_warnings(
+        paths,
+        options,
+        manifest,
+        Rc::new(ConsoleWarningEmitter),
+        fs::ProjectIO::new(),
+    )
 }
 
 pub(crate) fn main_with_warnings(
@@ -39,6 +45,7 @@ pub(crate) fn main_with_warnings(
     options: Options,
     manifest: Manifest,
     warnings: Rc<dyn WarningEmitterIO>,
+    io: fs::ProjectIO,
 ) -> Result<Built> {
     let perform_codegen = options.codegen;
     let root_config = crate::config::root_config(paths)?;
@@ -48,7 +55,6 @@ pub(crate) fn main_with_warnings(
         &cli::Reporter
     };
     let target = options.target.unwrap_or(root_config.target);
-    let io = fs::ProjectIO::new();
     // Initialise the BEAM compiler instance eagerly, so we don't have to wait
     // for it to boot when we come to use it for the first time.
     if target.is_erlang() {
