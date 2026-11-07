@@ -197,6 +197,13 @@ for using packages of yours that are not-yet production-ready, or
 for bug fixes that have not yet been published to Hex.
 
    [dependencies]
+   wibble = { git = "https://example.com/wibble.git", path = "wibblewobble" }
+
+A Git dependency from a monorepo. This is useful if you like to organise
+related packages in one shared Git repository. Provide the path from
+the root of your repository to the Gleam package you wish to use.
+
+   [dependencies]
    wibble = { path = "../wibble" }
 
 A local dependency, on your computer. This is useful for testing and
@@ -517,14 +524,26 @@ Add multiple packages:
 Add a package as a non-production dependency:
     gleam add --dev wibble
 
+Add a package from a Git source:
+    gleam add --git https://github.com/gleam-lang/json
+
+Add a package from Git, referencing a specific branch, commit, or tag:
+    gleam add --git git@github.com:gleam-lang/crypto --ref main
+
+Without `--ref`, the dependency will be pinned to the newest commit on
+the repository's default branch. If you would like to _track_ a branch
+instead, use `--ref <branch>`.
+
 You can also edit `gleam.toml` directly, for further control over your
 package dependencies. Run `gleam help deps` for documentation on the
 format.
 
-Usage: add [OPTIONS] <PACKAGES>...
+Usage: 
+        gleam add [OPTIONS] [PACKAGES]
+        gleam add [OPTIONS] --git <URI> [--ref <REF>] [--path <PATH>]
 
 Arguments:
-  <PACKAGES>...
+  [PACKAGES]...
           The names of Hex packages to add
 
 Options:
@@ -533,6 +552,16 @@ Options:
 
   -h, --help
           Print help (see a summary with '-h')
+
+Git Dependencies:
+      --git <URI>
+          Add a package from a remote git repository
+
+      --ref <REF>
+          The tag, branch, or commit to check out
+
+      --path <PATH>
+          The path inside the git repo where the package is located
 
 
 === Subcommand remove ===
