@@ -608,3 +608,23 @@ pub fn main() {
         vec![("main", "fn() -> String")]
     );
 }
+
+#[test]
+fn capture_of_module_function_with_labelled_argument_shadowed_by_variable() {
+    assert_module_infer!(
+        (
+            "other",
+            "pub fn greet(name: String, loud loud: Bool) -> String { name }"
+        ),
+        "
+import other
+
+pub fn main() {
+  let other = 1
+  let greet = other.greet(_, loud: True)
+  #(greet(\"Lucy\"), other + 1)
+}
+",
+        vec![("main", "fn() -> #(String, Int)")]
+    );
+}
