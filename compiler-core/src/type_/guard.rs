@@ -13,6 +13,7 @@ use crate::{
 };
 use ecow::EcoString;
 use src_span::SrcSpan;
+use std::sync::Arc;
 
 pub struct GuardTyper<'expression_typer, 'env, 'module> {
     typer: &'expression_typer mut ExprTyper<'env, 'module>,
@@ -320,7 +321,7 @@ impl<'expression_typer, 'env, 'module> GuardTyper<'expression_typer, 'env, 'modu
             }
 
             ValueConstructorVariant::ModuleConstant { literal, .. } => {
-                let literal = literal.clone().with_location(location);
+                let literal = literal.as_ref().clone().with_location(location);
                 return Ok(ClauseGuard::Constant(literal));
             }
         };
@@ -410,7 +411,7 @@ impl<'expression_typer, 'env, 'module> GuardTyper<'expression_typer, 'env, 'modu
                                 label,
                                 module_name,
                                 module_alias,
-                                literal,
+                                literal: Arc::unwrap_or_clone(literal),
                             })
                         }
 

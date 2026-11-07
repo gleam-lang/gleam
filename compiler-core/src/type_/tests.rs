@@ -2977,11 +2977,11 @@ fn assert_suitable_main_function_not_module_function() {
             documentation: None,
             location: SrcSpan::default(),
             module: "module".into(),
-            literal: Constant::Int {
+            literal: Arc::new(Constant::Int {
                 location: SrcSpan::default(),
                 value: "1".into(),
                 int_value: 1.into(),
-            },
+            }),
             implementations: Implementations {
                 gleam: true,
                 uses_erlang_externals: false,

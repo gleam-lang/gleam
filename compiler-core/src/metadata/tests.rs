@@ -53,7 +53,7 @@ fn constant_module(constant: TypedConstant) -> ModuleInterface {
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleConstant {
                     documentation: Some("Some documentation".into()),
-                    literal: constant,
+                    literal: Arc::new(constant),
                     location: SrcSpan::default(),
                     module: "one/two".into(),
                     implementations: Implementations {
@@ -1167,7 +1167,7 @@ fn constant_var() {
             type_: type_::int(),
             variant: ValueConstructorVariant::ModuleConstant {
                 documentation: Some("some doc".into()),
-                literal: one_original.clone(),
+                literal: Arc::new(one_original.clone()),
                 location: SrcSpan::default(),
                 module: "one/two".into(),
                 implementations: Implementations {
@@ -1200,7 +1200,7 @@ fn constant_var() {
                     type_: type_::int(),
                     variant: ValueConstructorVariant::ModuleConstant {
                         documentation: Some("some doc!!!!!!!!!".into()),
-                        literal: one,
+                        literal: Arc::new(one),
                         location: SrcSpan::default(),
                         module: "one/two".into(),
                         implementations: Implementations {
@@ -1222,7 +1222,7 @@ fn constant_var() {
                     type_: type_::int(),
                     variant: ValueConstructorVariant::ModuleConstant {
                         documentation: Some("some doc yeah".into()),
-                        literal: one_original,
+                        literal: Arc::new(one_original),
                         location: SrcSpan::default(),
                         module: "one/two".into(),
                         implementations: Implementations {
