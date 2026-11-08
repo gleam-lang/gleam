@@ -91,6 +91,11 @@
   owner only (0600 on Unix), preventing other users from reading it.
   ([bala-bhargav](https://github.com/bala-bhargav))
 
+- The new `gleam audit` command displays any retirements or CVEs for the
+  package's dependencies.
+  ([Andrey Kozhev](https://github.com/ankddev) and
+  ([Louis Pilfold](https://github.com/lpil))
+
 ### Language server
 
 - The language server will now offer "Discard unused variable" on each of
