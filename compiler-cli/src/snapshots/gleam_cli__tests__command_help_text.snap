@@ -602,7 +602,7 @@ Usage: audit [OPTIONS]
 
 Options:
       --format <FORMAT>
-          The format for showing the print the information using
+          The format to use for the information
           
           [default: text]
           [possible values: text, json]
