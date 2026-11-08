@@ -455,7 +455,7 @@ pub enum Command {
 
     /// Check for security advisories and retirements
     Audit {
-        /// The format for showing the print the information using
+        /// The format to use for the information
         #[arg(long, default_value = "text")]
         format: AuditOutputFormat,
     },
