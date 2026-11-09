@@ -755,3 +755,108 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn capture_of_module_function_shadowed_by_variable_of_unknown_type() {
+    assert_module_infer!(
+        (
+            "other",
+            "pub fn greet(name: String, loud loud: Bool) -> String { name }"
+        ),
+        "
+import other
+
+pub fn main(other) {
+  other.greet(_, loud: True)
+}
+",
+        vec![("main", "fn(a) -> fn(String) -> String")]
+    );
+}
+
+#[test]
+fn capture_of_module_function_shadowed_by_opaque_record_with_same_field() {
+    assert_module_infer!(
+        (
+            "other",
+            "pub opaque type Box {
+  Box(greet: Int)
+}
+
+pub fn new() -> Box { Box(1) }
+
+pub fn greet(name: String, loud loud: Bool) -> String { name }"
+        ),
+        "
+import other
+
+pub fn main() {
+  let other = other.new()
+  other.greet(_, loud: True)
+}
+",
+        vec![("main", "fn() -> fn(String) -> String")]
+    );
+}
+
+#[test]
+fn capture_of_module_function_shadowed_by_record_with_field_on_other_variant() {
+    assert_module_infer!(
+        (
+            "other",
+            "pub fn greet(name: String, loud loud: Bool) -> String { name }"
+        ),
+        "
+import other
+
+pub type Wibble {
+  Wobble(greet: Int)
+  Wubble
+}
+
+pub fn main(other: Wibble) {
+  other.greet(_, loud: True)
+}
+",
+        vec![
+            ("Wobble", "fn(Int) -> Wibble"),
+            ("Wubble", "Wibble"),
+            ("main", "fn(Wibble) -> fn(String) -> String")
+        ]
+    );
+}
+
+#[test]
+fn capture_of_aliased_module_function_shadowed_by_variable() {
+    assert_module_infer!(
+        (
+            "other",
+            "pub fn greet(name: String, loud loud: Bool) -> String { name }"
+        ),
+        "
+import other as o
+
+pub fn main() {
+  let o = 1
+  #(o.greet(_, loud: True), o)
+}
+",
+        vec![("main", "fn() -> #(fn(String) -> String, Int)")]
+    );
+}
+
+#[test]
+fn capture_of_module_constructor_with_labelled_argument_shadowed_by_variable() {
+    assert_module_infer!(
+        ("other", "pub type Wibble { Wibble(a: Int, b: Int) }"),
+        "
+import other
+
+pub fn main() {
+  let other = 1
+  #(other.Wibble(_, b: 2), other)
+}
+",
+        vec![("main", "fn() -> #(fn(Int) -> Wibble, Int)")]
+    );
+}
