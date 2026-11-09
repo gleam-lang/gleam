@@ -1,0 +1,41 @@
+---
+source: compiler-core/src/type_/tests/functions.rs
+expression: "\nimport other\n\npub type Wibble {\n  Wibble(greet: Int)\n}\n\npub fn main() {\n  let other = Wibble(1)\n  other.greet(_, loud: True)\n}\n"
+---
+----- SOURCE CODE
+-- other.gleam
+pub fn greet(name: String, loud loud: Bool) -> String { name }
+
+-- main.gleam
+
+import other
+
+pub type Wibble {
+  Wibble(greet: Int)
+}
+
+pub fn main() {
+  let other = Wibble(1)
+  other.greet(_, loud: True)
+}
+
+
+----- ERROR
+error: Type mismatch
+   ┌─ /src/one/two.gleam:10:3
+   │
+10 │   other.greet(_, loud: True)
+   │   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This value is being called as a function but its type is:
+
+    Int
+
+error: Unexpected labelled argument
+   ┌─ /src/one/two.gleam:10:18
+   │
+10 │   other.greet(_, loud: True)
+   │                  ^^^^^^^^^^
+
+This argument has been given a label but the function does
+not expect any. Please remove the label `loud`.

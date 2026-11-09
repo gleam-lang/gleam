@@ -628,3 +628,130 @@ pub fn main() {
         vec![("main", "fn() -> #(String, Int)")]
     );
 }
+
+#[test]
+fn capture_uses_record_field_with_same_name_as_module_function() {
+    assert_module_infer!(
+        (
+            "other",
+            "pub fn greet(name: String, loud loud: Bool) -> String { name }"
+        ),
+        "
+import other
+
+pub type Wibble {
+  Wibble(greet: fn(String) -> Int)
+}
+
+pub fn main() {
+  let other = Wibble(fn(_) { 1 })
+  let greet = other.greet(_)
+  greet(\"Lucy\")
+}
+",
+        vec![
+            ("Wibble", "fn(fn(String) -> Int) -> Wibble"),
+            ("main", "fn() -> Int")
+        ]
+    );
+}
+
+#[test]
+fn call_uses_record_field_with_same_name_as_module_function() {
+    assert_module_infer!(
+        (
+            "other",
+            "pub fn greet(name: String, loud loud: Bool) -> String { name }"
+        ),
+        "
+import other
+
+pub type Wibble {
+  Wibble(greet: fn(String) -> Int)
+}
+
+pub fn main() {
+  let other = Wibble(fn(_) { 1 })
+  other.greet(\"Lucy\")
+}
+",
+        vec![
+            ("Wibble", "fn(fn(String) -> Int) -> Wibble"),
+            ("main", "fn() -> Int")
+        ]
+    );
+}
+
+#[test]
+fn capture_of_record_field_with_wrong_type_and_same_name_as_module_function() {
+    assert_module_error!(
+        (
+            "other",
+            "pub fn greet(name: String, loud loud: Bool) -> String { name }"
+        ),
+        "
+import other
+
+pub type Wibble {
+  Wibble(greet: Int)
+}
+
+pub fn main() {
+  let other = Wibble(1)
+  other.greet(_, loud: True)
+}
+"
+    );
+}
+
+#[test]
+fn call_of_record_field_with_wrong_type_and_same_name_as_module_function() {
+    assert_module_error!(
+        (
+            "other",
+            "pub fn greet(name: String, loud loud: Bool) -> String { name }"
+        ),
+        "
+import other
+
+pub type Wibble {
+  Wibble(greet: Int)
+}
+
+pub fn main() {
+  let other = Wibble(1)
+  other.greet(\"Lucy\", loud: True)
+}
+"
+    );
+}
+
+#[test]
+fn capture_of_module_value_with_wrong_type_shadowed_by_variable() {
+    assert_module_error!(
+        ("other", "pub const greet = 1"),
+        "
+import other
+
+pub fn main() {
+  let other = 1
+  other.greet(_)
+}
+"
+    );
+}
+
+#[test]
+fn call_of_module_value_with_wrong_type_shadowed_by_variable() {
+    assert_module_error!(
+        ("other", "pub const greet = 1"),
+        "
+import other
+
+pub fn main() {
+  let other = 1
+  other.greet(\"Lucy\")
+}
+"
+    );
+}

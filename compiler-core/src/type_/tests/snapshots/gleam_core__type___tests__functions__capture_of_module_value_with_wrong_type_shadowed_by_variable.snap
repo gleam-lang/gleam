@@ -1,0 +1,28 @@
+---
+source: compiler-core/src/type_/tests/functions.rs
+expression: "\nimport other\n\npub fn main() {\n  let other = 1\n  other.greet(_)\n}\n"
+---
+----- SOURCE CODE
+-- other.gleam
+pub const greet = 1
+
+-- main.gleam
+
+import other
+
+pub fn main() {
+  let other = 1
+  other.greet(_)
+}
+
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:6:3
+  │
+6 │   other.greet(_)
+  │   ^^^^^^^^^^^
+
+This value is being called as a function but its type is:
+
+    Int
