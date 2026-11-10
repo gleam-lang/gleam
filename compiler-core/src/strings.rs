@@ -18,12 +18,6 @@ pub fn strip_ansi_escape_codes(input: &str) -> StrWithoutAnsiEscapes<'_> {
 #[derive(Debug, Clone)]
 pub struct StrWithoutAnsiEscapes<'content>(anstream::adapter::StrippedStr<'content>);
 
-impl<'content> StrWithoutAnsiEscapes<'content> {
-    pub fn to_string(self) -> String {
-        self.0.to_string()
-    }
-}
-
 impl<'content> Iterator for StrWithoutAnsiEscapes<'content> {
     type Item = &'content str;
 
