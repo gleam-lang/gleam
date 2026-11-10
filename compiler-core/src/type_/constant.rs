@@ -678,6 +678,11 @@ impl<'expression_typer, 'env, 'module> ConstantTyper<'expression_typer, 'env, 'm
             Some(field_map) => {
                 field_map.reorder(&mut arguments, location, IncorrectArityContext::Function)
             }
+            // If the constructor is not a fun, we should not
+            // attach an error that complains about a labelled argument.
+            // The value not being a function is reported below
+            // when matching the type.
+            None if !constructor.type_.is_fun() => Ok(()),
             // The fun or constructor has no field map and so we error
             // if arguments have been labelled.
             None if constructor.variant.is_record_constructor_function() => {

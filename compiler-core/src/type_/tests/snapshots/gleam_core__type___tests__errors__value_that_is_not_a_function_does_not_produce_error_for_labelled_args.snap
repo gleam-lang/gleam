@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub fn main() {\n  let wibble = 1\n  wibble(wobble: 1)\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  let wibble = 1
+  wibble(wobble: 1)
+}
+
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:4:3
+  │
+4 │   wibble(wobble: 1)
+  │   ^^^^^^
+
+This value is being called as a function but its type is:
+
+    Int

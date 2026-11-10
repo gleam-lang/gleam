@@ -311,6 +311,11 @@
 - Fixed a typo in a compiler error message for missing type arguments.
   ([Tomas Vemola](https://github.com/vemolista))
 
+- Fixed a bug where calling a value that is not a function with a labelled
+  argument would produce a noisy error about the label, in addition to the
+  type error.
+  ([Landon Boles](https://github.com/TheLDB))
+
 ## v1.19.2 - 2026-10-12
 
 ### Bug fixes

@@ -4656,3 +4656,57 @@ const b = Wibble(..a, wobble: 8)
 "
     );
 }
+
+#[test]
+fn value_that_is_not_a_function_does_not_produce_error_for_labelled_args() {
+    assert_module_error!(
+        "
+pub fn main() {
+  let wibble = 1
+  wibble(wobble: 1)
+}
+"
+    );
+}
+
+#[test]
+fn value_with_unbound_type_still_produces_error_for_labelled_args() {
+    // At this call site, we don't know the type of `wibble` yet, so it could
+    // still be a function.
+    // We should expect a labelled argument error on the label here!
+    assert_module_error!(
+        "
+pub fn go(wibble) {
+  wibble(wobble: 1)
+}
+"
+    );
+}
+
+#[test]
+fn constant_constructor_with_no_fields_does_not_produce_error_for_labelled_args() {
+    assert_module_error!(
+        "
+pub type Wibble {
+  Wibble
+}
+
+pub const wibble = Wibble(wobble: 1)
+"
+    );
+}
+
+#[test]
+fn constant_constructor_with_fields_still_produces_error_for_labelled_args() {
+    // `Wibble` is a function here, so the label is the only thing wrong and
+    // we do want an error for it.
+    assert_module_error!(
+        "
+pub type Wibble {
+  Wibble(Int)
+}
+
+pub const wibble = Wibble(wobble: 1)
+"
+    );
+}

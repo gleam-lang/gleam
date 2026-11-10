@@ -3887,6 +3887,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     // known to be a valid function we can make sure that there's
                     // no labelled arguments if it doesn't actually have a field map.
                     None if fun.is_invalid() => Ok(()),
+
+                    // If the expr being called is not a fun, we should not
+                    // attach an error that complains about a labelled argument
+                    // unless the fun's type is unbound, in which case it could
+                    // still be an actual function.
+                    // The value not being a function is reported below when
+                    // matching the type.
+                    None if !fun.type_().is_fun() && !fun.type_().is_unbound() => Ok(()),
                     None if fun.is_record_constructor_function() => assert_no_labelled_arguments(
                         &arguments,
                         UnexpectedLabelledArgKind::RecordConstructorArgument,
