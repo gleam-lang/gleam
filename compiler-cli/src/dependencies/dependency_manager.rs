@@ -270,13 +270,15 @@ where
     fn security_audit_dependencies(&self, resolved: &Resolved) -> Result<(), Error> {
         tracing::debug!("audit_manifest");
         let audit = Audit::audit_manifest(&resolved.manifest.packages, &self.package_fetcher)?;
-        Ok(if !audit.is_empty() {
-            let (count, prefix) = match audit.packages.len() {
-                1 => (1, "dependency has"),
-                n => (n, "dependencies have"),
-            };
-            eprintln!("{count} {prefix} security advisories. Run `gleam audit` for details.",);
-        })
+        if audit.is_empty() {
+            return Ok(());
+        }
+        let (count, prefix) = match audit.packages.len() {
+            1 => (1, "dependency has"),
+            n => (n, "dependencies have"),
+        };
+        eprintln!("{count} {prefix} security advisories. Run `gleam audit` for details.");
+        Ok(())
     }
 
     fn check_for_possible_major_version_updates(&self, resolved: &Resolved) {
