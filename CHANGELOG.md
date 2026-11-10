@@ -58,8 +58,9 @@
   your application no longer affect compilation.
   ([John Downey](https://github.com/jtdowney))
 
-- The compiler now builds projects that use a lot of constants up to 35% faster,
-  using up to 43% less memory.
+- The compiler's analysis of code that uses constants has been optimised. This
+  code will now compile faster and use less memory to compile for each constant
+  used.
   ([Alistair Smith](https://github.com/alii))
 
 ### Build tool
