@@ -46,7 +46,7 @@ expression: "example_audit().as_output(AuditOutputFormat::Json)"
         },
         {
           "id": "CVE-9876-9999",
-          "summary": "summary 3",
+          "summary": "\u001b[32mansi escape\u001b[m codes",
           "html_url": "https://example.com/2",
           "cvss_rating": "critical",
           "aliases": [

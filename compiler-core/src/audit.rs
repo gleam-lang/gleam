@@ -4,7 +4,9 @@
 #[cfg(test)]
 mod tests;
 
-use crate::{Error, dependency::PackageFetcher, manifest::ManifestPackage};
+use crate::{
+    Error, dependency::PackageFetcher, manifest::ManifestPackage, strings::strip_ansi_escape_codes,
+};
 use clap::ValueEnum;
 use ecow::EcoString;
 use hexpm::{Release, version::Version};
@@ -79,7 +81,9 @@ impl Audit {
         let mut out = String::new();
 
         for package in &self.packages {
-            out.push_str(&package.name);
+            for text in strip_ansi_escape_codes(package.name.as_str()) {
+                out.push_str(text);
+            }
             out.push(' ');
             out.push_str(package.version.to_string().as_str());
 
@@ -87,7 +91,9 @@ impl Audit {
                 out.push_str("\n  Retired (");
                 out.push_str(retirement.reason.to_str());
                 out.push_str(")\n  ");
-                out.push_str(retirement.message.as_str());
+                for text in strip_ansi_escape_codes(retirement.message.as_str()) {
+                    out.push_str(text);
+                }
                 out.push('\n');
             }
 
@@ -108,13 +114,19 @@ impl Audit {
                         } else {
                             out.push_str(", ");
                         }
-                        out.push_str(alias);
+                        for text in strip_ansi_escape_codes(alias) {
+                            out.push_str(text);
+                        }
                     }
                 }
                 out.push_str("\n  ");
-                out.push_str(&advisory.summary);
+                for text in strip_ansi_escape_codes(&advisory.summary) {
+                    out.push_str(text);
+                }
                 out.push_str("\n  ");
-                out.push_str(&advisory.html_url);
+                for text in strip_ansi_escape_codes(&advisory.html_url) {
+                    out.push_str(text);
+                }
                 out.push('\n');
             }
 

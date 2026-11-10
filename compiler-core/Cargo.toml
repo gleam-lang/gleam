@@ -47,6 +47,8 @@ bitvec = { version = "1", features = ["serde"] }
 # Sourcemap generation
 sourcemap = "9"
 indexmap = "2.12.1"
+# ANSI terminal output and escaping
+anstream = "1"
 
 src-span.workspace = true
 num-bigint.workspace = true
