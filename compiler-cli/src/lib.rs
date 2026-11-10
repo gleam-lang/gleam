@@ -1046,7 +1046,7 @@ pub fn main() {
             let mut buffer = stderr.buffer();
             error.pretty(&mut buffer);
             stderr.print(&buffer).expect("Final result error writing");
-            std::process::exit(127);
+            std::process::exit(1);
         }
     }
 }
