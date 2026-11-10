@@ -52,7 +52,7 @@ fn example_audit() -> Audit {
                     },
                     SecurityAdvisory {
                         id: "CVE-9876-9999".into(),
-                        summary: "summary 3".into(),
+                        summary: "\x1b[32mansi escape\x1b[m codes".into(),
                         html_url: "https://example.com/2".into(),
                         cvss_rating: Some(AdvisorySeverity::Critical),
                         aliases: vec!["ALIAS-6554-3677".into(), "OTHER-3558-9935".into()],
