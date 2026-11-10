@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub type Wibble {\n  Wibble(Int)\n}\n\npub const wibble = Wibble(wobble: 1)\n"
+---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble(Int)
+}
+
+pub const wibble = Wibble(wobble: 1)
+
+
+----- ERROR
+error: Unexpected labelled argument
+  ┌─ /src/one/two.gleam:6:27
+  │
+6 │ pub const wibble = Wibble(wobble: 1)
+  │                           ^^^^^^^^^
+
+This argument has been given a label but the record constructor does
+not expect any. Please remove the label `wobble`.

@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub fn go(wibble) {\n  wibble(wobble: 1)\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(wibble) {
+  wibble(wobble: 1)
+}
+
+
+----- ERROR
+error: Unexpected labelled argument
+  ┌─ /src/one/two.gleam:3:10
+  │
+3 │   wibble(wobble: 1)
+  │          ^^^^^^^^^
+
+This argument has been given a label but the function does
+not expect any. Please remove the label `wobble`.
