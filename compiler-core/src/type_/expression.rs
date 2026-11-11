@@ -1100,7 +1100,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // ```
         //
         // However, if `<function>` is an `UntypedExpr::Call`, `UntypedExpr::TupleIndex`,
-        // or `UntypedExpr::FieldAccess`, we want to capture the function returned by
+        // or a record `UntypedExpr::FieldAccess`, we want to capture the function returned by
         // that expression. To avoid re-evaluating `<function>` on every call, it is
         // compiled into a block that binds the result to a temporary variable first:
         // ```
@@ -1122,6 +1122,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }) = body.first()
         {
             match &**fun {
+                // A module access like `other.wibble(_)` is captured like a
+                // normal function, so it keeps its argument labels.
+                UntypedExpr::FieldAccess {
+                    container, label, ..
+                } if self.is_module_access(container, label) => {
+                    self.infer_fn(arguments, &[], body, kind, return_annotation, location)
+                }
+
                 UntypedExpr::Call { .. }
                 | UntypedExpr::TupleIndex { .. }
                 | UntypedExpr::FieldAccess { .. } => {
@@ -1524,6 +1532,33 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         } else {
             Ok(())
         }
+    }
+
+    /// Returns true if `infer_field_access` will treat `container.label` as a
+    /// module access. It makes the same choice without inferring anything.
+    fn is_module_access(&self, container: &UntypedExpr, label: &EcoString) -> bool {
+        let UntypedExpr::Var { name, .. } = container else {
+            return false;
+        };
+
+        // If no variable has this name then it can only be a module.
+        let Some(variable) = self.environment.scope.get(name) else {
+            return true;
+        };
+
+        // We only use the module if the variable has no field with this label
+        // and the module has a value with it.
+        let has_field = self
+            .record_accessors(&variable.type_)
+            .is_some_and(|(_, fields)| fields.contains_key(label));
+
+        !has_field
+            && self
+                .environment
+                .imported_modules
+                .get(name)
+                .and_then(|(_, module)| module.values.get(label))
+                .is_some_and(|value| value.publicity.is_importable())
     }
 
     /// Attempts to infer a record access. If the attempt fails, then will fallback to attempting to infer a module access.
@@ -2749,25 +2784,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         })
     }
 
-    pub(crate) fn infer_known_record_access(
-        &mut self,
-        record_type: Arc<Type>,
-        record_location: SrcSpan,
-        usage: FieldAccessUsage,
-        location: SrcSpan,
-        label: EcoString,
-    ) -> Result<RecordAccessor, Error> {
-        if record_type.is_unbound() {
-            return Err(Error::RecordAccessUnknownType {
-                location: record_location,
-            });
-        }
-
-        let unknown_field = |fields| {
-            self.unknown_field_error(fields, record_type.clone(), location, label.clone(), usage)
-        };
-        let (accessors_map, variant_accessors) = match collapse_links(record_type.clone()).as_ref()
-        {
+    /// The fields a record type has, and the fields its inferred variant has.
+    /// Returns `None` if the type can't have fields.
+    fn record_accessors(
+        &self,
+        record_type: &Arc<Type>,
+    ) -> Option<(&AccessorsMap, &HashMap<EcoString, RecordAccessor>)> {
+        match collapse_links(record_type.clone()).as_ref() {
             // A type in the current module which may have fields
             Type::Named {
                 module,
@@ -2805,11 +2828,30 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 }),
 
             // Non-named types do not have fields
-            Type::Fn { .. } | Type::Var { .. } | Type::Tuple { .. } => {
-                return Err(unknown_field(vec![]));
-            }
+            Type::Fn { .. } | Type::Var { .. } | Type::Tuple { .. } => None,
         }
-        .ok_or_else(|| unknown_field(vec![]))?;
+    }
+
+    pub(crate) fn infer_known_record_access(
+        &mut self,
+        record_type: Arc<Type>,
+        record_location: SrcSpan,
+        usage: FieldAccessUsage,
+        location: SrcSpan,
+        label: EcoString,
+    ) -> Result<RecordAccessor, Error> {
+        if record_type.is_unbound() {
+            return Err(Error::RecordAccessUnknownType {
+                location: record_location,
+            });
+        }
+
+        let unknown_field = |fields| {
+            self.unknown_field_error(fields, record_type.clone(), location, label.clone(), usage)
+        };
+        let (accessors_map, variant_accessors) = self
+            .record_accessors(&record_type)
+            .ok_or_else(|| unknown_field(vec![]))?;
 
         let RecordAccessor {
             index,

@@ -588,3 +588,275 @@ pub const wibble = Wibble(1.0, 1.0)
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/6498
+#[test]
+fn capture_of_module_function_with_labelled_argument() {
+    assert_module_infer!(
+        (
+            "other",
+            "pub fn greet(name: String, loud loud: Bool) -> String { name }"
+        ),
+        "
+import other
+
+pub fn main() {
+  let greet = other.greet(_, loud: True)
+  greet(\"Lucy\")
+}
+",
+        vec![("main", "fn() -> String")]
+    );
+}
+
+#[test]
+fn capture_of_module_function_with_labelled_argument_shadowed_by_variable() {
+    assert_module_infer!(
+        (
+            "other",
+            "pub fn greet(name: String, loud loud: Bool) -> String { name }"
+        ),
+        "
+import other
+
+pub fn main() {
+  let other = 1
+  let greet = other.greet(_, loud: True)
+  #(greet(\"Lucy\"), other + 1)
+}
+",
+        vec![("main", "fn() -> #(String, Int)")]
+    );
+}
+
+#[test]
+fn capture_uses_record_field_with_same_name_as_module_function() {
+    assert_module_infer!(
+        (
+            "other",
+            "pub fn greet(name: String, loud loud: Bool) -> String { name }"
+        ),
+        "
+import other
+
+pub type Wibble {
+  Wibble(greet: fn(String) -> Int)
+}
+
+pub fn main() {
+  let other = Wibble(fn(_) { 1 })
+  let greet = other.greet(_)
+  greet(\"Lucy\")
+}
+",
+        vec![
+            ("Wibble", "fn(fn(String) -> Int) -> Wibble"),
+            ("main", "fn() -> Int")
+        ]
+    );
+}
+
+#[test]
+fn call_uses_record_field_with_same_name_as_module_function() {
+    assert_module_infer!(
+        (
+            "other",
+            "pub fn greet(name: String, loud loud: Bool) -> String { name }"
+        ),
+        "
+import other
+
+pub type Wibble {
+  Wibble(greet: fn(String) -> Int)
+}
+
+pub fn main() {
+  let other = Wibble(fn(_) { 1 })
+  other.greet(\"Lucy\")
+}
+",
+        vec![
+            ("Wibble", "fn(fn(String) -> Int) -> Wibble"),
+            ("main", "fn() -> Int")
+        ]
+    );
+}
+
+#[test]
+fn capture_of_record_field_with_wrong_type_and_same_name_as_module_function() {
+    assert_module_error!(
+        (
+            "other",
+            "pub fn greet(name: String, loud loud: Bool) -> String { name }"
+        ),
+        "
+import other
+
+pub type Wibble {
+  Wibble(greet: Int)
+}
+
+pub fn main() {
+  let other = Wibble(1)
+  other.greet(_, loud: True)
+}
+"
+    );
+}
+
+#[test]
+fn call_of_record_field_with_wrong_type_and_same_name_as_module_function() {
+    assert_module_error!(
+        (
+            "other",
+            "pub fn greet(name: String, loud loud: Bool) -> String { name }"
+        ),
+        "
+import other
+
+pub type Wibble {
+  Wibble(greet: Int)
+}
+
+pub fn main() {
+  let other = Wibble(1)
+  other.greet(\"Lucy\", loud: True)
+}
+"
+    );
+}
+
+#[test]
+fn capture_of_module_value_with_wrong_type_shadowed_by_variable() {
+    assert_module_error!(
+        ("other", "pub const greet = 1"),
+        "
+import other
+
+pub fn main() {
+  let other = 1
+  other.greet(_)
+}
+"
+    );
+}
+
+#[test]
+fn call_of_module_value_with_wrong_type_shadowed_by_variable() {
+    assert_module_error!(
+        ("other", "pub const greet = 1"),
+        "
+import other
+
+pub fn main() {
+  let other = 1
+  other.greet(\"Lucy\")
+}
+"
+    );
+}
+
+#[test]
+fn capture_of_module_function_shadowed_by_variable_of_unknown_type() {
+    assert_module_infer!(
+        (
+            "other",
+            "pub fn greet(name: String, loud loud: Bool) -> String { name }"
+        ),
+        "
+import other
+
+pub fn main(other) {
+  other.greet(_, loud: True)
+}
+",
+        vec![("main", "fn(a) -> fn(String) -> String")]
+    );
+}
+
+#[test]
+fn capture_of_module_function_shadowed_by_opaque_record_with_same_field() {
+    assert_module_infer!(
+        (
+            "other",
+            "pub opaque type Box {
+  Box(greet: Int)
+}
+
+pub fn new() -> Box { Box(1) }
+
+pub fn greet(name: String, loud loud: Bool) -> String { name }"
+        ),
+        "
+import other
+
+pub fn main() {
+  let other = other.new()
+  other.greet(_, loud: True)
+}
+",
+        vec![("main", "fn() -> fn(String) -> String")]
+    );
+}
+
+#[test]
+fn capture_of_module_function_shadowed_by_record_with_field_on_other_variant() {
+    assert_module_infer!(
+        (
+            "other",
+            "pub fn greet(name: String, loud loud: Bool) -> String { name }"
+        ),
+        "
+import other
+
+pub type Wibble {
+  Wobble(greet: Int)
+  Wubble
+}
+
+pub fn main(other: Wibble) {
+  other.greet(_, loud: True)
+}
+",
+        vec![
+            ("Wobble", "fn(Int) -> Wibble"),
+            ("Wubble", "Wibble"),
+            ("main", "fn(Wibble) -> fn(String) -> String")
+        ]
+    );
+}
+
+#[test]
+fn capture_of_aliased_module_function_shadowed_by_variable() {
+    assert_module_infer!(
+        (
+            "other",
+            "pub fn greet(name: String, loud loud: Bool) -> String { name }"
+        ),
+        "
+import other as o
+
+pub fn main() {
+  let o = 1
+  #(o.greet(_, loud: True), o)
+}
+",
+        vec![("main", "fn() -> #(fn(String) -> String, Int)")]
+    );
+}
+
+#[test]
+fn capture_of_module_constructor_with_labelled_argument_shadowed_by_variable() {
+    assert_module_infer!(
+        ("other", "pub type Wibble { Wibble(a: Int, b: Int) }"),
+        "
+import other
+
+pub fn main() {
+  let other = 1
+  #(other.Wibble(_, b: 2), other)
+}
+",
+        vec![("main", "fn() -> #(fn(Int) -> Wibble, Int)")]
+    );
+}
