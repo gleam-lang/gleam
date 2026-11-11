@@ -251,6 +251,22 @@ pub fn go(x, y) {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/6506
+#[test]
+fn segment_with_size_zero_is_kept_if_it_is_not_a_pure_value_constructor() {
+    assert_js!(
+        r#"
+fn fail() -> Int {
+  panic as "oh no!"
+}
+
+pub fn main() {
+  <<fail():size(0)>>
+}
+"#,
+    );
+}
+
 #[test]
 fn variable() {
     assert_js!(

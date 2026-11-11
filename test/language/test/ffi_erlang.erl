@@ -5,7 +5,7 @@
 
 -export([
     to_string/1, append/2, print/1, file_exists/1, halt/1, to_dynamic/1, to_codepoint/1,
-    read_uint16_from_bit_array/1, module_source/1
+    read_uint16_from_bit_array/1, module_source/1, new_mutable_reference/1, get_mutable_reference/1, set_mutable_reference/2
 ]).
 
 append(A, B) ->
@@ -39,3 +39,15 @@ module_source(Name) ->
     CompileInfo = Module:module_info(compile),
     Source = proplists:get_value(source, CompileInfo),
     unicode:characters_to_binary(Source).
+
+new_mutable_reference(Value) ->
+  Ref = make_ref(),
+  persistent_term:put(Ref, Value),
+  Ref.
+
+get_mutable_reference(Ref) ->
+  persistent_term:get(Ref).
+
+set_mutable_reference(Ref, Value) ->
+  persistent_term:put(Ref, Value),
+  nil.

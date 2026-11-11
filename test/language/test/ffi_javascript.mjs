@@ -63,3 +63,21 @@ export function toCodepoint(x) {
 export function readUint16FromBitArray(bitArray) {
   return BitArray$BitArray$data(bitArray).getUint16(0);
 }
+
+class MutableReference {
+  constructor(value) {
+    this.value = value;
+  }
+}
+
+export function newMutableReference(value) {
+  return new MutableReference(value);
+}
+
+export function getMutableReference(reference) {
+  return reference.value;
+}
+
+export function setMutableReference(ref, value) {
+  ref.value = value;
+}

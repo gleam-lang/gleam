@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\nfn fail() -> Int {\n  panic as \"oh no!\"\n}\n\npub fn main() {\n  <<fail():size(0)>>\n}\n"
+---
+----- SOURCE CODE
+
+fn fail() -> Int {
+  panic as "oh no!"
+}
+
+pub fn main() {
+  <<fail():size(0)>>
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError, toBitArray, sizedInt } from "../gleam.mjs";
+
+const FILEPATH = "src/module.gleam";
+
+function fail() {
+  throw makeError("panic", FILEPATH, "my/mod", 3, "fail", "oh no!", {})
+}
+
+export function main() {
+  return toBitArray([sizedInt(fail(), 0, true)]);
+}
