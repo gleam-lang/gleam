@@ -3,6 +3,20 @@
 
 pub type Dynamic
 
+pub type MutableReference(a)
+
+@external(erlang, "ffi_erlang", "new_mutable_reference")
+@external(javascript, "./ffi_javascript.mjs", "newMutableReference")
+pub fn new_mutable_reference(value: a) -> MutableReference(a)
+
+@external(erlang, "ffi_erlang", "set_mutable_reference")
+@external(javascript, "./ffi_javascript.mjs", "setMutableReference")
+pub fn set_mutable_reference(mutable_reference: MutableReference(a), value: a) -> Nil
+
+@external(erlang, "ffi_erlang", "get_mutable_reference")
+@external(javascript, "./ffi_javascript.mjs", "getMutableReference")
+pub fn get_mutable_reference(mutable_reference: MutableReference(a)) -> a
+
 @external(erlang, "ffi_erlang", "print")
 @external(javascript, "./ffi_javascript.mjs", "print")
 pub fn print(a: String) -> Nil
