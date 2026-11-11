@@ -2925,3 +2925,48 @@ pub fn go(bits: BitArray, flag: Bool) -> Int {
 "#,
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/6509
+#[test]
+fn bit_array_segment_with_compile_time_known_negative_size_becomes_0() {
+    assert_js!(
+        r#"
+pub fn go(bits) {
+  <<bits:bits-size(-2)>>
+}
+"#,
+    );
+}
+
+#[test]
+fn bit_array_segment_with_compile_time_known_positive_size() {
+    assert_js!(
+        r#"
+pub fn go(bits) {
+  <<bits:bits-size(2)>>
+}
+"#,
+    );
+}
+
+#[test]
+fn bit_array_segment_with_posibly_negative_size_is_wrapped_in_max() {
+    assert_js!(
+        r#"
+pub fn go(bits, size) {
+  <<bits:bits-size(size)>>
+}
+"#,
+    );
+}
+
+#[test]
+fn bit_array_segment_with_posibly_negative_size_is_wrapped_in_max_2() {
+    assert_js!(
+        r#"
+pub fn go(bits, size) {
+  <<bits:bits-size(size * 11)>>
+}
+"#,
+    );
+}
