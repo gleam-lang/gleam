@@ -240,3 +240,21 @@ pub fn bits_with_unit_pattern_test() {
   assert a == <<1>>
   assert b == <<2>>
 }
+
+// https://github.com/gleam-lang/gleam/issues/6509
+pub fn bit_array_with_negative_size_becomes_empty_test() {
+  let bits = <<1, 2, 3, 4, 5, 6>>
+  assert <<>> == <<bits:bits-size(-2)>>
+}
+
+pub fn bit_array_with_negative_size_becomes_empty_2_test() {
+  let bits = <<1, 2, 3, 4, 5, 6>>
+  let size = -2
+  assert <<>> == <<bits:bits-size(size)>>
+}
+
+pub fn bit_array_with_negative_size_becomes_empty_3_test() {
+  let bits = <<1, 2, 3, 4, 5, 6>>
+  let size = -2
+  assert <<>> == <<bits:bits-size(size * 11)>>
+}
