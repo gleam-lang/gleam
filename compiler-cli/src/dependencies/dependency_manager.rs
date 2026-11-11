@@ -5,6 +5,7 @@ use ecow::EcoString;
 use futures::future;
 use gleam_core::{
     Error, Result,
+    audit::Audit,
     build::{Mode, Telemetry},
     config::PackageConfig,
     dependency,
@@ -244,19 +245,44 @@ where
 
         if resolved.any_changes() {
             // Record new state of the packages directory
-            // TODO: test
             tracing::debug!("writing_manifest_toml");
             write_manifest_to_disc(paths, &resolved.manifest)?;
+            LocalPackages::from_manifest(&resolved.manifest).write_to_disc(paths)?;
+
+            // Display the changes in versions to the user.
+            self.telemetry
+                .resolved_package_versions(&resolved.package_changes);
+
+            // If requested to do so, check if there are major upgrades that could
+            // be performed with more relaxed version requirements, and inform the
+            // user if so.
+            self.check_for_possible_major_version_updates(&resolved);
+
+            // Hex also provides information about security advisories.
+            // If any of the resolved package versions have advisories then
+            // print a message to the user so they know to review them.
+            self.security_audit_dependencies(&resolved)?;
         }
-        LocalPackages::from_manifest(&resolved.manifest).write_to_disc(paths)?;
 
-        // Display the changes in versions to the user.
-        self.telemetry
-            .resolved_package_versions(&resolved.package_changes);
+        Ok(resolved.manifest)
+    }
 
-        // If requested to do so, check if there are major upgrades that could
-        // be performed with more relaxed version requirements, and inform the
-        // user if so.
+    fn security_audit_dependencies(&self, resolved: &Resolved) -> Result<(), Error> {
+        tracing::debug!("audit_manifest");
+        let audit = Audit::audit_manifest(&resolved.manifest.packages, &self.package_fetcher)?;
+        if audit.is_empty() {
+            return Ok(());
+        }
+        let (count, prefix) = match audit.packages.len() {
+            1 => (1, "dependency has"),
+            n => (n, "dependencies have"),
+        };
+        eprintln!("{count} {prefix} security advisories. Run `gleam audit` for details.");
+        Ok(())
+    }
+
+    fn check_for_possible_major_version_updates(&self, resolved: &Resolved) {
+        tracing::debug!("check_major_versions");
         if let CheckMajorVersions::Yes = self.check_major_versions {
             let major_versions_available = dependency::check_for_major_version_updates(
                 &resolved.manifest,
@@ -269,7 +295,6 @@ where
                 );
             }
         }
-        Ok(resolved.manifest)
     }
 
     fn perform_version_resolution(

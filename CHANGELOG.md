@@ -96,6 +96,16 @@
   owner only (0600 on Unix), preventing other users from reading it.
   ([bala-bhargav](https://github.com/bala-bhargav))
 
+- Package resolution now prints a message if any of the resolved versions have
+  open advisories or retirements.
+  ([Andrey Kozhev](https://github.com/ankddev) and
+  ([Louis Pilfold](https://github.com/lpil))
+
+- The new `gleam audit` command displays any retirements or advisories for the
+  package's dependencies, exiting non-zero if any are present.
+  ([Andrey Kozhev](https://github.com/ankddev) and
+  ([Louis Pilfold](https://github.com/lpil))
+
 ### Language server
 
 - The language server will now offer "Discard unused variable" on each of

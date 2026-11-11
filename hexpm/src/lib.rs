@@ -1037,36 +1037,24 @@ where
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, serde::Deserialize)]
+#[derive(Debug, PartialEq, Eq, Clone, serde::Deserialize, serde::Serialize)]
 pub struct RetirementStatus {
     pub reason: RetirementReason,
     pub message: String,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, serde::Deserialize, serde::Serialize)]
 pub enum RetirementReason {
+    #[serde(rename = "other")]
     Other,
+    #[serde(rename = "invalid")]
     Invalid,
+    #[serde(rename = "security")]
     Security,
+    #[serde(rename = "deprecated")]
     Deprecated,
+    #[serde(rename = "renamed")]
     Renamed,
-}
-
-impl<'de> serde::Deserialize<'de> for RetirementReason {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let s: &str = serde::de::Deserialize::deserialize(deserializer)?;
-        match s {
-            "other" => Ok(RetirementReason::Other),
-            "invalid" => Ok(RetirementReason::Invalid),
-            "security" => Ok(RetirementReason::Security),
-            "deprecated" => Ok(RetirementReason::Deprecated),
-            "renamed" => Ok(RetirementReason::Renamed),
-            _ => Err(serde::de::Error::custom("unknown retirement reason type")),
-        }
-    }
 }
 
 impl RetirementReason {
@@ -1100,30 +1088,18 @@ pub struct SecurityAdvisory {
     pub aliases: Vec<String>,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, serde::Serialize, serde::Deserialize)]
 pub enum AdvisorySeverity {
+    #[serde(rename = "none")]
     None,
+    #[serde(rename = "low")]
     Low,
+    #[serde(rename = "medium")]
     Medium,
+    #[serde(rename = "high")]
     High,
+    #[serde(rename = "critical")]
     Critical,
-}
-
-impl<'de> serde::Deserialize<'de> for AdvisorySeverity {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let s: &str = serde::de::Deserialize::deserialize(deserializer)?;
-        match s {
-            "none" => Ok(AdvisorySeverity::None),
-            "low" => Ok(AdvisorySeverity::Low),
-            "medium" => Ok(AdvisorySeverity::Medium),
-            "high" => Ok(AdvisorySeverity::High),
-            "critical" => Ok(AdvisorySeverity::Critical),
-            _ => Err(serde::de::Error::custom("unknown advisory severity type")),
-        }
-    }
 }
 
 impl AdvisorySeverity {
