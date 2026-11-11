@@ -15,5 +15,5 @@ import { toBitArray, bitArraySlice } from "../gleam.mjs";
 
 export function go(x) {
   let i = 4;
-  return toBitArray([bitArraySlice(toBitArray([171]), 0, i)]);
+  return toBitArray([bitArraySlice(toBitArray([171]), 0, Math.max(0, i))]);
 }
