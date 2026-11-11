@@ -1,0 +1,28 @@
+---
+source: compiler-core/src/version_bump/tests.rs
+expression: bump
+---
+-- BEFORE
+---- the_module
+
+pub const wobble = wibble
+
+@external(erlang, "wibble_ffi", "something")
+fn wibble() -> Nil
+
+-- AFTER
+---- the_module
+
+pub const wobble = wibble
+
+@external(erlang, "wibble_ffi", "something")
+fn wibble() -> Nil {
+  Nil
+}
+
+-- MINOR
+
+== the_module ==
+The target support for wobble has changed:
+- Erlang
++ Erlang, JavaScript

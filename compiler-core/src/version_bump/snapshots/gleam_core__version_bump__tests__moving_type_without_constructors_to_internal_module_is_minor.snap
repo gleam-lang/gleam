@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/version_bump/tests.rs
+expression: bump
+---
+-- BEFORE
+---- wibble
+pub type Wibble
+
+-- AFTER
+---- thepackage/internal
+pub type Wibble
+
+---- wibble
+
+import thepackage/internal
+pub type Wibble = internal.Wibble
+
+-- MINOR
+
+== wibble ==
+- pub type Wibble
++ pub type Wibble = Wibble

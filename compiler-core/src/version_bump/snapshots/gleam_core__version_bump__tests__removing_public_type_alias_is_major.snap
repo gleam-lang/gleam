@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/version_bump/tests.rs
+expression: bump
+---
+-- BEFORE
+---- the_module
+pub type MyAlias = Int
+
+-- AFTER
+---- the_module
+
+
+-- MAJOR
+
+== the_module ==
+- pub type MyAlias

@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/version_bump/tests.rs
+expression: bump
+---
+-- BEFORE
+---- the_module
+pub const lists: #(List(Int), List(Float)) = #([], [])
+
+-- AFTER
+---- the_module
+pub const lists: #(List(a), List(b)) = #([], [])
+
+-- MINOR
+
+== the_module ==
+- pub const lists: #(List(Int), List(Float))
++ pub const lists: #(List(a), List(b))

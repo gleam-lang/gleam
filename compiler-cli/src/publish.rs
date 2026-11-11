@@ -10,20 +10,26 @@ use gleam_core::{
     ast::{CallArg, Statement, TypedExpr, TypedFunction},
     build::{Codegen, Compile, ErlangOutput, Mode, Options, Package, Target},
     config::{GleamVersion, PackageConfig, SpdxLicense},
+    dependency::{PackageFetchError, PackageFetcher as _},
     docs::{Dependency, DependencyKind, DocContext},
     error::{FileIoCause, InvalidReadmeReason, SmallVersion, wrap},
     hex,
+    io::HttpClient as _,
     manifest::ManifestPackageSource,
+    package_interface::PackageInterface,
     paths::{self, ProjectPaths},
     requirement::Requirement,
-    type_,
+    type_::ModuleInterface,
+    version_bump::{VersionBump, VersionChanges, detect_changes, show_diffs},
 };
 use hexpm::version::{Range, Version};
 use itertools::Itertools;
 use sha2::Digest;
 use std::{collections::HashMap, io::Write};
 
-use crate::{build, cli, docs, fs, http::HttpClient, new::default_readme};
+use crate::{
+    build, cli, dependencies::PackageFetcher, docs, fs, http::HttpClient, new::default_readme,
+};
 
 const CORE_TEAM_PUBLISH_PASSWORD: &str = "Trans rights are human rights";
 
@@ -50,6 +56,10 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
         dependencies,
     } = do_build_hex_tarball(paths, &mut config)?;
 
+    let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+    let http = HttpClient::new();
+    let hex_config = hexpm::Config::new();
+
     check_for_name_squatting(&compile_result)?;
     check_for_multiple_top_level_modules(&compile_result, i_am_sure)?;
     check_for_default_main(&compile_result)?;
@@ -63,6 +73,11 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
         DocContext::HexPublish,
         &cached_modules,
     )?)?;
+
+    if !check_version_changes(&config, cached_modules, &runtime, &hex_config, &http)? {
+        println!("Not publishing.");
+        return Ok(());
+    }
 
     // Ask user if this is correct
     if !generated_files_added.is_empty() {
@@ -84,9 +99,6 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
         return Ok(());
     }
 
-    let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
-    let http = HttpClient::new();
-    let hex_config = hexpm::Config::new();
     let credentials = crate::hex::HexAuthentication::new(&runtime, &http, hex_config.clone())
         .get_or_create_api_credentials()?;
     let credentials = crate::hex::write_credentials(&credentials)?;
@@ -371,6 +383,153 @@ be published.
     Ok(should_publish)
 }
 
+/// Checks that the changes in this version match up with the bump in version
+/// number (major, minor, or patch)
+fn check_version_changes(
+    config: &PackageConfig,
+    modules: imbl::HashMap<EcoString, ModuleInterface>,
+    runtime: &tokio::runtime::Runtime,
+    hex_config: &hexpm::Config,
+    http: &HttpClient,
+) -> Result<bool, Error> {
+    // v0 means there are no semver rules so breaking changes are allowed with
+    // any release; we discourage publishing v0 packages but that code is handled
+    // elsewhere so we don't need to worry about it here.
+    if config.version.major == 0 {
+        return Ok(true);
+    }
+
+    // Pre-release versions allow arbitrary breaking changes, so there's nothing
+    // to check here.
+    if config.version.is_pre() {
+        return Ok(true);
+    }
+
+    let package_fetcher = PackageFetcher::new(runtime.handle().clone());
+    let hex_package = match package_fetcher.get_dependencies(&config.name) {
+        Ok(package) => package,
+        // If the package is not found on Hex, we are publishing the first version
+        // so there's nothing to compare with.
+        Err(PackageFetchError::NotFoundError(_)) => return Ok(true),
+        Err(error) => return Err(Error::Hex(error.to_string())),
+    };
+    let current_version = &config.version;
+
+    // Find the latest non-pre-release version which is less than this one, i.e.
+    // the version that this is updating.
+    let Some(previous_version) = previous_version(
+        current_version,
+        hex_package
+            .releases
+            .iter()
+            .map(|release| &release.version)
+            .collect(),
+    ) else {
+        // The package has no versions or only pre-release versions, which means
+        // there's nothing to compare to. Versions can have breaking changes compared
+        // to pre-releases, so we shouldn't compare those here.
+        return Ok(true);
+    };
+
+    let version_bump = version_difference(previous_version, current_version);
+
+    let request = hexpm::repository_get_package_interface_request(
+        &config.name,
+        &previous_version.to_string(),
+        None,
+        hex_config,
+    );
+
+    let response = runtime.handle().block_on(http.send(request))?;
+
+    let package_interface =
+        hexpm::repository_get_package_interface_response(response).map_err(|error| {
+            Error::DownloadPackageError {
+                package_name: config.name.to_string(),
+                package_version: previous_version.to_string(),
+                error: error.to_string(),
+            }
+        })?;
+
+    let parsed: PackageInterface =
+        serde_json::from_str(&package_interface).map_err(|error| Error::DownloadPackageError {
+            package_name: config.name.to_string(),
+            package_version: previous_version.to_string(),
+            error: error.to_string(),
+        })?;
+
+    // Only pass in modules which are part of the public API of the current package.
+    let modules = modules
+        .into_iter()
+        .filter(|(_, module)| module.package == config.name && !module.is_internal)
+        .collect();
+
+    let api_changes = detect_changes(&parsed, &modules);
+    let api_bump = api_changes.bump();
+
+    let bump_is_sufficient = version_bump >= api_bump;
+
+    if bump_is_sufficient {
+        return Ok(true);
+    }
+
+    let suggested_version = apply_bump(previous_version, api_bump);
+
+    let diffs = match api_changes {
+        VersionChanges::Major(changed) => show_diffs(changed, &parsed, &modules),
+        VersionChanges::Minor(changed) => show_diffs(changed, &parsed, &modules),
+        VersionChanges::Patch => EcoString::new(),
+    };
+
+    println!(
+        "You are about to publish a release which makes a {} version bump.
+
+Based on changes to the public API in this version, this should be a {} version
+bump instead, meaning the next version should be v{}. Unless you have a very
+good reason, you should follow semantic versioning for your package.
+
+Changes:\n\n{}",
+        version_bump.to_string(),
+        api_bump.to_string(),
+        suggested_version,
+        diffs,
+    );
+
+    let should_publish =
+        cli::confirm_with_text("I have a good reason to not use semantic versioning")?;
+    println!();
+    Ok(should_publish)
+}
+
+/// Finds the most recent version which is before the current one.
+fn previous_version<'a>(
+    current_version: &Version,
+    versions: Vec<&'a Version>,
+) -> Option<&'a Version> {
+    versions
+        .into_iter()
+        .filter(|version| !version.is_pre() && *version < current_version)
+        .max()
+}
+
+fn apply_bump(version: &Version, bump: VersionBump) -> Version {
+    match bump {
+        VersionBump::Major => Version::new(version.major + 1, 0, 0),
+        VersionBump::Minor => Version::new(version.major, version.minor + 1, 0),
+        VersionBump::Patch => Version::new(version.major, version.minor, version.patch + 1),
+    }
+}
+
+fn version_difference(previous_version: &Version, current_version: &Version) -> VersionBump {
+    if previous_version.major != current_version.major {
+        VersionBump::Major
+    } else if previous_version.minor != current_version.minor {
+        VersionBump::Minor
+    } else {
+        VersionBump::Patch
+    }
+}
+
 /// Ask for confirmation if the package name if `gleam_*`
 fn check_for_gleam_prefix(config: &PackageConfig) -> Result<bool, Error> {
     if !config.name.starts_with("gleam_") || config.name.starts_with("gleam_community_") {
@@ -393,7 +552,7 @@ the maintainers listed on https://hex.pm/.
 
 struct Tarball {
     compile_result: Package,
-    cached_modules: imbl::HashMap<EcoString, type_::ModuleInterface>,
+    cached_modules: imbl::HashMap<EcoString, ModuleInterface>,
     data: Vec<u8>,
     src_files_added: Vec<Utf8PathBuf>,
     generated_files_added: Vec<(Utf8PathBuf, String)>,
@@ -1252,4 +1411,101 @@ fn find_missing_git_repo_root_at_lower_level() {
 
     let repository_root = fs::get_git_repository_root(current_path);
     assert!(repository_root.is_none());
+}
+
+#[test]
+fn previous_version_is_patch() {
+    assert_eq!(
+        previous_version(
+            &Version::new(1, 2, 2),
+            vec![
+                &Version::new(1, 0, 0),
+                &Version::new(1, 1, 0),
+                &Version::new(1, 2, 0),
+                &Version::new(1, 2, 1),
+                &Version::new(1, 3, 0)
+            ]
+        ),
+        Some(&Version::new(1, 2, 1))
+    );
+}
+
+#[test]
+fn previous_version_is_minor() {
+    assert_eq!(
+        previous_version(
+            &Version::new(1, 3, 0),
+            vec![
+                &Version::new(1, 0, 0),
+                &Version::new(1, 1, 0),
+                &Version::new(1, 2, 0),
+                &Version::new(1, 2, 1),
+            ]
+        ),
+        Some(&Version::new(1, 2, 1))
+    );
+}
+
+#[test]
+fn previous_version_is_major() {
+    assert_eq!(
+        previous_version(
+            &Version::new(2, 0, 0),
+            vec![
+                &Version::new(1, 0, 0),
+                &Version::new(1, 1, 0),
+                &Version::new(1, 2, 0),
+                &Version::new(1, 2, 1),
+            ]
+        ),
+        Some(&Version::new(1, 2, 1))
+    );
+}
+
+#[test]
+fn apply_patch_bump() {
+    assert_eq!(
+        apply_bump(&Version::new(1, 2, 1), VersionBump::Patch),
+        Version::new(1, 2, 2)
+    );
+}
+
+#[test]
+fn apply_minor_bump() {
+    assert_eq!(
+        apply_bump(&Version::new(1, 2, 1), VersionBump::Minor),
+        Version::new(1, 3, 0)
+    );
+}
+
+#[test]
+fn apply_major_bump() {
+    assert_eq!(
+        apply_bump(&Version::new(1, 2, 1), VersionBump::Major),
+        Version::new(2, 0, 0)
+    );
+}
+
+#[test]
+fn patch_version_difference() {
+    assert_eq!(
+        version_difference(&Version::new(1, 2, 1), &Version::new(1, 2, 2)),
+        VersionBump::Patch,
+    )
+}
+
+#[test]
+fn minor_version_difference() {
+    assert_eq!(
+        version_difference(&Version::new(1, 2, 1), &Version::new(1, 3, 2)),
+        VersionBump::Minor,
+    )
+}
+
+#[test]
+fn major_version_difference() {
+    assert_eq!(
+        version_difference(&Version::new(1, 2, 1), &Version::new(2, 0, 0)),
+        VersionBump::Major,
+    )
 }
