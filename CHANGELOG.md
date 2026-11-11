@@ -361,6 +361,10 @@
   the literal value `Nil` in a case expression with guards.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the compiler would generate invalid code for bit array
+  segments with a negative size on the JavaScript target.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Fixed a typo in a compiler error message for missing type arguments.
   ([Tomas Vemola](https://github.com/vemolista))
 
