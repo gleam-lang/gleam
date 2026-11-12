@@ -31,7 +31,9 @@ export const List: {
 }
 export function List$Empty<T>(): List<T>;
 export function List$NonEmpty<T>(head: T, tail: List<T>): List<T>;
+export function List$isEmpty<T>(list: List<T>): list is Empty;
 export function List$isEmpty(list: any): list is List<unknown>;
+export function List$isNonEmpty<T>(list: List<T>): list is NonEmpty<T>;
 export function List$isNonEmpty(list: any): list is List<unknown>;
 export function List$NonEmpty$first<T>(list: List<T>): T | undefined;
 export function List$NonEmpty$rest<T>(list: List<T>): List<T> | undefined;
@@ -97,7 +99,9 @@ export const Result: {
 }
 export function Result$Ok<T, E>(value: T): Result<T, E>;
 export function Result$Error<T, E>(error: E): Result<T, E>;
+export function Result$isError<T, E>(result: Result<T, E>): result is Error<T, E>;
 export function Result$isError(data: any): data is Result<unknown, unknown>;
+export function Result$isOk<T, E>(result: Result<T, E>): result is Ok<T, E>;
 export function Result$isOk(data: any): data is Result<unknown, unknown>;
 export function Result$Ok$0<T, E>(result: Result<T, E>): T | undefined;
 export function Result$Error$0<T, E>(result: Result<T, E>): E | undefined;
