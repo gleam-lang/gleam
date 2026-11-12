@@ -666,19 +666,12 @@ impl Command {
             Self::Add {
                 packages,
                 dev,
-                git: git_uri,
-                ref_: git_ref,
+                git,
+                ref_,
                 path,
             } => {
                 let paths = find_project_paths(directory)?;
-
-                if let Some(packages) = packages {
-                    add::hex_dependencies(&paths, packages, dev)
-                } else if let Some(git_uri) = git_uri {
-                    add::git_dependency(&paths, git_uri, git_ref, path.map(Utf8PathBuf::from), dev)
-                } else {
-                    unreachable!("Exactly one of PACKAGES and --git must be provided")
-                }
+                add::command(&paths, packages, dev, git, ref_, path)
             }
 
             Self::Remove { packages } => {

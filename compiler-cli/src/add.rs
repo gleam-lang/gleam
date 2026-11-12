@@ -19,11 +19,24 @@ use crate::{
     fs,
 };
 
-pub fn hex_dependencies(
+pub fn command(
     paths: &ProjectPaths,
-    packages_to_add: Vec<String>,
+    packages: Option<Vec<String>>,
     dev: bool,
+    git_uri: Option<String>,
+    git_ref: Option<String>,
+    path: Option<String>,
 ) -> Result<()> {
+    if let Some(packages) = packages {
+        hex_dependencies(paths, packages, dev)
+    } else if let Some(git_uri) = git_uri {
+        git_dependency(paths, git_uri, git_ref, path.map(Utf8PathBuf::from), dev)
+    } else {
+        unreachable!("Exactly one of PACKAGES and --git must be provided")
+    }
+}
+
+fn hex_dependencies(paths: &ProjectPaths, packages_to_add: Vec<String>, dev: bool) -> Result<()> {
     let config = crate::config::root_config(paths)?;
     if packages_to_add.iter().any(|name| name == &config.name) {
         return Err(Error::CannotAddSelfAsDependency { name: config.name });
@@ -47,7 +60,7 @@ pub fn hex_dependencies(
         },
     )?;
 
-    // Read gleam.toml and manifest.toml so we can insert new deps into it
+    // Read gleam.toml so we can insert new deps into it
     let mut gleam_toml = read_toml_edit(&paths.root_config())?;
 
     // Insert the new deps
@@ -81,7 +94,7 @@ pub fn hex_dependencies(
     Ok(())
 }
 
-pub fn git_dependency(
+fn git_dependency(
     paths: &ProjectPaths,
     repository: String,
     ref_: Option<String>,
@@ -124,7 +137,7 @@ pub fn git_dependency(
         },
     )?;
 
-    // Read gleam.toml and manifest.toml so we can insert new deps into it
+    // Read gleam.toml so we can insert new deps into it
     let mut gleam_toml = read_toml_edit(&paths.root_config())?;
 
     // Pull the selected version out of the new manifest so we know what it is

@@ -152,8 +152,8 @@ where
 }
 
 /**
-* Used to compare 2 versions of a package.
-*/
+ * Used to compare 2 versions of a package.
+ */
 pub type PackageVersionDiffs = HashMap<String, (Version, Version)>;
 
 fn resolve_versions_diffs(
