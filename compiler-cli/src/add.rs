@@ -137,41 +137,38 @@ pub fn git_dependency(
 
     tracing::info!(version=%version, "new_package_version_resolved");
 
-    let specifier: toml_edit::Item = match &requirement {
-        Requirement::Git {
-            git,
-            path,
-            ref_: commit_hash,
-        } => {
-            // The manifest's ref will always be a fully resolved commit-SHA, even if the
-            // user provides a branch as the ref. This will pin the dep to the tip of the
-            // branch at the moment the command was run, which is not the user's intent:
-            // they most likely want to TRACK the branch.
-            //
-            // At this point, we know that their ref resolved correctly and the dep has
-            // been added, so we can safely use the value they explicitly provided via --ref
-            // as the ref to insert into gleam.toml.
-            let ref_: EcoString = if let Some(user_ref) = &ref_ {
-                user_ref.into()
-            } else {
-                commit_hash.into()
-            };
-
-            let mut git_specifier = toml_edit::InlineTable::new();
-            let _ = git_specifier.insert("git", git.to_string().into());
-            let _ = git_specifier.insert("ref", ref_.to_string().into());
-
-            if let Some(path) = path {
-                let _ = git_specifier.insert("path", path.to_string().into());
-            }
-
-            git_specifier.into()
-        }
-
-        _ => {
-            unreachable!("dependencies::resolve_git_requirement must return Requirement::Git")
-        }
+    let Requirement::Git {
+        git,
+        path,
+        ref_: commit_hash,
+    } = &requirement
+    else {
+        unreachable!("dependencies::resolve_git_requirement must return Requirement::Git")
     };
+
+    // The manifest's ref will always be a fully resolved commit-SHA, even if the
+    // user provides a branch as the ref. This will pin the dep to the tip of the
+    // branch at the moment the command was run, which is not the user's intent:
+    // they most likely want to TRACK the branch.
+    //
+    // At this point, we know that their ref resolved correctly and the dep has
+    // been added, so we can safely use the value they explicitly provided via --ref
+    // as the ref to insert into gleam.toml.
+    let ref_: EcoString = if let Some(user_ref) = &ref_ {
+        user_ref.into()
+    } else {
+        commit_hash.into()
+    };
+
+    let mut git_specifier = toml_edit::InlineTable::new();
+    let _ = git_specifier.insert("git", git.to_string().into());
+    let _ = git_specifier.insert("ref", ref_.to_string().into());
+
+    if let Some(path) = path {
+        let _ = git_specifier.insert("path", path.to_string().into());
+    }
+
+    let specifier: toml_edit::Item = git_specifier.into();
 
     // The manifest.toml file has already been updated on disk by
     // `resolve_and_download`; we just have to update `gleam.toml` now.
