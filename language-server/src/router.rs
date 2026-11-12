@@ -32,6 +32,9 @@ pub(crate) struct Router<IO, Reporter> {
     io: FileSystemProxy<IO>,
     engines: HashMap<Utf8PathBuf, Project<IO, Reporter>>,
     progress_reporter: Reporter,
+    // Published diagnostics outlive an engine rebuild (for example after a
+    // configuration change). Keep one bookkeeper per project independently.
+    feedback: HashMap<Utf8PathBuf, FeedbackBookKeeper>,
 }
 
 impl<IO, Reporter> Router<IO, Reporter>
@@ -51,12 +54,24 @@ where
         Self {
             io,
             engines: HashMap::new(),
+            feedback: HashMap::new(),
             progress_reporter,
         }
     }
 
     pub fn project_path(&self, path: &Utf8Path) -> Option<Utf8PathBuf> {
         find_gleam_project_parent(&self.io, path)
+    }
+
+    /// Get diagnostic state without initialising a compiler engine. This state
+    /// survives engine invalidation because the client retains published errors.
+    pub fn feedback_for_path(&mut self, path: &Utf8Path) -> Option<&mut FeedbackBookKeeper> {
+        let root = if self.engines.contains_key(path) {
+            path.to_path_buf()
+        } else {
+            self.project_path(path)?
+        };
+        Some(self.feedback.entry(root).or_default())
     }
 
     pub fn project_for_path(
@@ -145,7 +160,6 @@ where
         let engine = LanguageServerEngine::new(config, progress_reporter, io, paths)?;
         let project = Project {
             engine,
-            feedback: FeedbackBookKeeper::default(),
             gleam_toml_modification_time: modification_time,
             gleam_toml_fingerprint: SourceFingerprint::new(&toml),
         };
@@ -196,7 +210,6 @@ where
 #[derive(Debug)]
 pub(crate) struct Project<A, B> {
     pub engine: LanguageServerEngine<A, B>,
-    pub feedback: FeedbackBookKeeper,
     pub gleam_toml_modification_time: SystemTime,
     pub gleam_toml_fingerprint: SourceFingerprint,
 }

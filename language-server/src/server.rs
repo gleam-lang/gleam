@@ -4,7 +4,7 @@
 use super::{
     DownloadDependencies, MakeLocker,
     engine::{self, LanguageServerEngine},
-    feedback::{DiagnosticCache, Feedback, FeedbackBookKeeper},
+    feedback::{Feedback, FeedbackBookKeeper},
     files::FileSystemProxy,
     messages::{Message, MessageBuffer, Next, Notification, Request},
     progress::ConnectionProgressReporter,
@@ -46,7 +46,6 @@ pub struct LanguageServer<'a, IO> {
     initialise_params: InitializeParams,
     connection: DebugIgnore<&'a lsp_server::Connection>,
     outside_of_project_feedback: FeedbackBookKeeper,
-    diagnostic_cache: DiagnosticCache,
     router: Router<IO, ConnectionProgressReporter<'a>>,
     changed_projects: HashSet<Utf8PathBuf>,
     io: FileSystemProxy<IO>,
@@ -72,7 +71,6 @@ where
             initialise_params,
             changed_projects: HashSet::new(),
             outside_of_project_feedback: FeedbackBookKeeper::default(),
-            diagnostic_cache: DiagnosticCache::default(),
             router,
             io,
         })
@@ -153,8 +151,7 @@ where
     }
 
     fn publish_feedback(&mut self, feedback: Feedback) -> Result<()> {
-        let diagnostics = self.diagnostic_cache.update(&feedback);
-        self.publish_diagnostics(diagnostics)?;
+        self.publish_diagnostics(feedback.diagnostics)?;
         self.publish_messages(feedback.messages)?;
         Ok(())
     }
@@ -293,25 +290,29 @@ where
             &mut LanguageServerEngine<IO, ConnectionProgressReporter<'a>>,
         ) -> engine::Response<Result<T, ResponseError>>,
     {
-        match self.router.project_for_path(path) {
+        match self.router.project_for_path(path.clone()) {
             Ok(Some(project)) => {
                 let engine::Response {
                     result,
                     warnings,
                     compilation,
                 } = handler(&mut project.engine);
+                let book_keeper = self
+                    .router
+                    .feedback_for_path(&path)
+                    .expect("An engine has a project feedback bookkeeper");
                 match result {
                     Ok(Ok(value)) => {
-                        let feedback = project.feedback.response(compilation, warnings);
+                        let feedback = book_keeper.response(compilation, warnings);
                         let json = serde_json::to_value(value).expect("response to json");
                         (Ok(json), feedback)
                     }
                     Ok(Err(error)) => {
-                        let feedback = project.feedback.response(compilation, warnings);
+                        let feedback = book_keeper.response(compilation, warnings);
                         (Err(error), feedback)
                     }
                     Err(e) => {
-                        let feedback = project.feedback.build_with_error(e, compilation, warnings);
+                        let feedback = book_keeper.build_with_error(e, compilation, warnings);
                         (Ok(Json::Null), feedback)
                     }
                 }
@@ -331,9 +332,9 @@ where
         path: Utf8PathBuf,
         error: gleam_core::Error,
     ) -> (Result<Json, ResponseError>, Feedback) {
-        let feedback = match self.router.project_for_path(path) {
-            Ok(Some(project)) => project.feedback.error(error),
-            Ok(None) | Err(_) => self.outside_of_project_feedback.error(error),
+        let feedback = match self.router.feedback_for_path(&path) {
+            Some(book_keeper) => book_keeper.error(error),
+            None => self.outside_of_project_feedback.error(error),
         };
         (Ok(Json::Null), feedback)
     }
@@ -494,21 +495,19 @@ where
     fn cache_file_in_memory(&mut self, path: Utf8PathBuf, text: String) -> Feedback {
         self.project_changed(&path);
         if let Err(error) = self.io.write_mem_cache(&path, &text) {
-            return self.outside_of_project_feedback.error(error);
+            return self.path_error_response(path, error).1;
         }
-        // Update only filename diagnostics, preserving compilation diagnostics.
-        let mut feedback = Feedback::none();
         let diagnostic = self.validate_module_filename(&path, &text);
-        _ = feedback
-            .module_filename_diagnostics
-            .insert(path, diagnostic);
-        feedback
+        match self.router.feedback_for_path(&path) {
+            Some(feedback) => feedback.update_module_filename(path, diagnostic),
+            None => Feedback::none(),
+        }
     }
 
     fn discard_in_memory_cache(&mut self, path: Utf8PathBuf) -> Feedback {
         self.project_changed(&path);
         if let Err(error) = self.io.delete_mem_cache(&path) {
-            return self.outside_of_project_feedback.error(error);
+            return self.path_error_response(path, error).1;
         }
         Feedback::none()
     }
@@ -537,16 +536,16 @@ where
 
     fn source_file_opened(&mut self, path: Utf8PathBuf, text: String) -> Feedback {
         let mut feedback = self.cache_file_in_memory(path.clone(), text);
-        if let Ok(Some(project)) = self.router.project_for_path(path.clone()) {
-            feedback.append_feedback(project.feedback.open_file(path));
+        if let Some(book_keeper) = self.router.feedback_for_path(&path) {
+            feedback.append_feedback(book_keeper.open_file(path));
         }
         feedback
     }
 
     fn source_file_closed(&mut self, path: Utf8PathBuf) -> Feedback {
         let mut feedback = self.discard_in_memory_cache(path.clone());
-        if let Ok(Some(project)) = self.router.project_for_path(path.clone()) {
-            feedback.append_feedback(project.feedback.close_file(&path));
+        if let Some(book_keeper) = self.router.feedback_for_path(&path) {
+            feedback.append_feedback(book_keeper.close_file(&path));
         }
         feedback
     }
@@ -576,7 +575,6 @@ fn module_filename_diagnostic(
         .parent()?
         .iter()
         .chain(std::iter::once(module_filename))
-        .collect::<Vec<_>>()
         .join("/");
     let is_reserved = module_name == "gleam";
     if is_valid_gleam_module_name(&module_name) && !is_reserved {
@@ -846,117 +844,4 @@ fn path_to_uri(path: Utf8PathBuf) -> Url {
 }
 
 #[cfg(test)]
-mod filename_tests {
-    use super::*;
-
-    #[test]
-    fn valid_module_filenames() {
-        let project_root = Utf8Path::new("project");
-        for relative in [
-            "src/valid.gleam",
-            "test/my_module.gleam",
-            "dev/module_123.gleam",
-            "src/nested/module.gleam",
-            "src/nested/gleam.gleam",
-            "src/gleam/list.gleam",
-        ] {
-            let path = project_root.join(relative);
-            assert!(
-                module_filename_diagnostic(project_root, &path, "").is_none(),
-                "{path}"
-            );
-        }
-    }
-
-    #[test]
-    fn invalid_module_filenames() {
-        let project_root = Utf8Path::new("project");
-        for relative in [
-            "src/Invalid.gleam",
-            "test/my-module.gleam",
-            "dev/123module.gleam",
-            "src/my.module.gleam",
-            "src/Invalid/valid.gleam",
-            "src/.gleam",
-            "src/nested/.gleam",
-        ] {
-            let path = project_root.join(relative);
-            assert!(
-                module_filename_diagnostic(project_root, &path, "").is_some(),
-                "{path}"
-            );
-        }
-    }
-
-    #[test]
-    fn invalid_filename_diagnostic() {
-        let project_root = Utf8Path::new("project");
-        let path = project_root.join("src/Invalid.gleam");
-        let source = "pub fn main() {\n  Nil\n}";
-        let diagnostic = module_filename_diagnostic(project_root, &path, source).unwrap();
-        assert_eq!(diagnostic.title, "Invalid is not a valid module name");
-        assert_eq!(diagnostic.level, Level::Error);
-        assert_eq!(
-            diagnostic.text,
-            concat!(
-                "Module names must be snake_case, starting with a lowercase letter ",
-                "and containing only lowercase letters, numbers, and underscores.",
-            )
-        );
-        let location = diagnostic.location.unwrap();
-        assert_eq!(location.path, path);
-        assert_eq!(location.src.as_str(), source);
-        assert_eq!(location.label.span, SrcSpan::new(0, 15));
-    }
-
-    #[test]
-    fn prelude_module_name_is_reserved() {
-        let project_root = Utf8Path::new("project");
-        for directory in ["src", "test", "dev"] {
-            let path = project_root.join(directory).join("gleam.gleam");
-            let diagnostic = module_filename_diagnostic(project_root, &path, "").unwrap();
-            assert_eq!(
-                diagnostic.text,
-                concat!(
-                    "The `gleam` is the name of Gleam's prelude module so ",
-                    "it cannot be used for a new module.",
-                )
-            );
-            assert_eq!(diagnostic.location.unwrap().label.span, SrcSpan::new(0, 0));
-        }
-    }
-
-    #[test]
-    fn ignores_files_outside_source_directories() {
-        let project_root = Utf8Path::new("project");
-        for relative in [
-            "Invalid.gleam",
-            "other/Invalid.gleam",
-            "src_extra/Invalid.gleam",
-            "src/Invalid.txt",
-            "src/Invalid.gleam.bak",
-        ] {
-            let path = project_root.join(relative);
-            assert!(
-                module_filename_diagnostic(project_root, &path, "").is_none(),
-                "{path}"
-            );
-        }
-        let path = Utf8Path::new("other-project/src/Invalid.gleam");
-        assert!(module_filename_diagnostic(project_root, path, "").is_none());
-    }
-
-    #[test]
-    fn native_path_separators_are_normalised_in_module_names() {
-        let project_root = Utf8Path::new("project");
-        let path = project_root
-            .join("src")
-            .join("nested")
-            .join("Invalid.gleam");
-        let diagnostic = module_filename_diagnostic(project_root, &path, "").unwrap();
-        assert_eq!(
-            diagnostic.title,
-            "nested/Invalid is not a valid module name"
-        );
-    }
-}
+mod tests;

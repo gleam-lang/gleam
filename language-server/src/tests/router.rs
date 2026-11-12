@@ -120,3 +120,76 @@ fn set_up_minimal_router(paths: &ProjectPaths) -> (LanguageServerTestIO, Router)
     io.write(&paths.root_config(), toml).unwrap();
     (io, router)
 }
+
+#[test]
+fn feedback_survives_engine_recreation() {
+    let paths = ProjectPaths::new("/app".into());
+    let (io, mut router) = set_up_minimal_router(&paths);
+    let path = paths.root().join("src/Invalid.gleam");
+    let filename = gleam_core::diagnostic::Diagnostic {
+        title: "Invalid module name".into(),
+        text: "Invalid module name".into(),
+        level: gleam_core::diagnostic::Level::Error,
+        location: None,
+        hint: None,
+    };
+    // Filename validation can report diagnostics without creating an engine.
+    _ = router
+        .feedback_for_path(&path)
+        .expect("Test project state is available")
+        .update_module_filename(path.clone(), Some(filename));
+    assert!(
+        io.actions
+            .lock()
+            .expect("Actions lock is not poisoned")
+            .is_empty()
+    );
+    assert_eq!(compile(&mut router, &paths), Ok(()));
+    router.delete_engine_for_path(&path);
+    assert_eq!(compile(&mut router, &paths), Ok(()));
+    let feedback = router
+        .feedback_for_path(&path)
+        .expect("Test project state is available")
+        .update_module_filename(path.clone(), None);
+    // A clearing update is required because the client still has the error.
+    assert_eq!(feedback.diagnostics.get(&path), Some(&vec![]));
+}
+
+#[test]
+fn feedback_is_isolated_between_projects() {
+    let paths = ProjectPaths::new("/app".into());
+    let (io, mut router) = set_up_minimal_router(&paths);
+    let other_paths = ProjectPaths::new("/other".into());
+    io.write(&other_paths.root_config(), "")
+        .expect("Test project state is available");
+    let path = paths.root().join("src/main.gleam");
+    let error = Error::Parse {
+        path: path.clone(),
+        src: "blah".into(),
+        error: Box::new(gleam_core::parse::error::ParseError {
+            error: gleam_core::parse::error::ParseErrorType::ConcatPatternVariableLeftHandSide,
+            location: src_span::SrcSpan::new(1, 4),
+        }),
+    };
+    _ = router
+        .feedback_for_path(&path)
+        .expect("Test project state is available")
+        .error(error);
+    assert!(
+        router
+            .feedback_for_path(other_paths.root())
+            .expect("Test project state is available")
+            .response(crate::engine::Compilation::Yes(vec![]), vec![])
+            .diagnostics
+            .is_empty()
+    );
+    assert_eq!(
+        router
+            .feedback_for_path(paths.root())
+            .expect("Test project state is available")
+            .response(crate::engine::Compilation::Yes(vec![]), vec![])
+            .diagnostics
+            .get(&path),
+        Some(&vec![])
+    );
+}
