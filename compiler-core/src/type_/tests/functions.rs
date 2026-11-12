@@ -588,3 +588,36 @@ pub const wibble = Wibble(1.0, 1.0)
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/6501
+#[test]
+fn capture_of_record_field_that_is_not_a_function() {
+    assert_module_error!(
+        "
+pub type Wibble {
+  Wibble(wobble: Int)
+}
+
+pub fn main() {
+  let wibble = Wibble(1)
+  wibble.wobble(_)
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/6501
+#[test]
+fn capture_of_call_result_that_is_not_a_function() {
+    assert_module_error!(
+        "
+fn wibble() {
+  1
+}
+
+pub fn main() {
+  wibble()(_)
+}
+"
+    );
+}

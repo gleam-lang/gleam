@@ -1147,7 +1147,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     let call = UntypedExpr::Call {
                         location: *call_location,
                         fun: Box::new(UntypedExpr::Var {
-                            location: *call_location,
+                            location: fun.location(),
                             name: tmp_value_name,
                         }),
                         arguments: call_arguments.clone(),

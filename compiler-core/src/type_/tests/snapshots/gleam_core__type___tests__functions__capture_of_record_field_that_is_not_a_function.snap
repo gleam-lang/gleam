@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/type_/tests/functions.rs
+expression: "\npub type Wibble {\n  Wibble(wobble: Int)\n}\n\npub fn main() {\n  let wibble = Wibble(1)\n  wibble.wobble(_)\n}\n"
+---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble(wobble: Int)
+}
+
+pub fn main() {
+  let wibble = Wibble(1)
+  wibble.wobble(_)
+}
+
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:8:3
+  │
+8 │   wibble.wobble(_)
+  │   ^^^^^^^^^^^^^
+
+This value is being called as a function but its type is:
+
+    Int
