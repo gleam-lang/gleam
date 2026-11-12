@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/type_/tests/functions.rs
+expression: "\nfn wibble() {\n  1\n}\n\npub fn main() {\n  wibble()(_)\n}\n"
+---
+----- SOURCE CODE
+
+fn wibble() {
+  1
+}
+
+pub fn main() {
+  wibble()(_)
+}
+
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:7:3
+  │
+7 │   wibble()(_)
+  │   ^^^^^^^^
+
+This value is being called as a function but its type is:
+
+    Int
