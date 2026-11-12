@@ -15,9 +15,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 gleam-core = { path = "../compiler-core" }
 gleam-format = { path = "../format" }
-console_error_panic_hook = "0"
 wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
-tracing-wasm = "*"
 camino.workspace = true
 hexpm = { path = "../hexpm" }
 imbl.workspace = true
@@ -26,6 +24,10 @@ serde.workspace = true
 termcolor.workspace = true
 tracing.workspace = true
 getrandom.workspace = true
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+console_error_panic_hook = "0"
+tracing-wasm = "*"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.42"

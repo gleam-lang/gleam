@@ -8,11 +8,9 @@ authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2024"
 license = "Apache-2.0"
 
-[dependencies]
+[dev-dependencies]
 gleam-core = { path = "../compiler-core" }
 gleam-cli = { path = "../compiler-cli" }
 camino = { workspace = true, features = ["serde1"] }
 tempfile.workspace = true
-
-[dev-dependencies]
 insta.workspace = true
