@@ -9,6 +9,12 @@
 
 ### Compiler
 
+- The TypeScript prelude now narrows the type of `List` and `Result` values when
+  using their `$is` functions. For example,
+  `Result$isOk<T, E>(result: Result<T, E>)` now narrows to `Ok<T, E>`, matching
+  the narrowing overloads the compiler generates for custom types.
+  ([wanjinhao1](https://github.com/wanjinhao1))
+
 - The compiler will now show "Unused variable" warning for each of alternative
   patterns.
   ([Andrey Kozhev](https://github.com/ankddev))
