@@ -30,3 +30,4 @@ num-bigint.workspace = true
 
 [dev-dependencies]
 insta.workspace = true
+termcolor.workspace = true

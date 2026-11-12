@@ -10,13 +10,14 @@ use super::engine::Compilation;
 
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct Feedback {
+    /// Complete replacement diagnostics for each changed file. Absent files
+    /// retain their published diagnostics; an empty vector clears a file.
     pub diagnostics: HashMap<Utf8PathBuf, Vec<Diagnostic>>,
     pub messages: Vec<Diagnostic>,
 }
 
 impl Feedback {
-    /// Set the diagnostics for a file to an empty vector. This will overwrite
-    /// any existing diagnostics on the client.
+    /// Clear the diagnostics for a file.
     pub fn unset_existing_diagnostics(&mut self, path: Utf8PathBuf) {
         _ = self.diagnostics.insert(path, vec![]);
     }
@@ -59,8 +60,18 @@ impl Feedback {
 /// To do this we keep track of which files have diagnostics and only overwrite
 /// them if the file has been recompiled.
 ///
+/// Filename validation runs on file open/edit rather than compilation. This
+/// bookkeeper retains both sources and combines them into `Feedback.diagnostics`
+/// whenever either changes. `Feedback` is only an outgoing update; the server
+/// can publish it directly without maintaining another diagnostic cache.
+///
 #[derive(Debug, Default)]
 pub struct FeedbackBookKeeper {
+    // Compilation and filename validation run independently. Retain their
+    // diagnostics here so every Feedback contains a complete list for each
+    // changed file, without requiring the publisher to merge sources.
+    compilation_diagnostics: HashMap<Utf8PathBuf, Vec<Diagnostic>>,
+    module_filename_diagnostics: HashMap<Utf8PathBuf, Diagnostic>,
     files_with_warnings: HashSet<Utf8PathBuf>,
     files_with_errors: HashSet<Utf8PathBuf>,
     /// Skipped files need special handling: a compile will skip a file if it
@@ -88,6 +99,15 @@ impl FeedbackBookKeeper {
     /// that have compiled without warnings.
     ///
     pub fn response(&mut self, compilation: Compilation, warnings: Vec<Warning>) -> Feedback {
+        let feedback = self.compilation_response(compilation, warnings);
+        self.finish_compilation_feedback(feedback)
+    }
+
+    fn compilation_response(
+        &mut self,
+        compilation: Compilation,
+        warnings: Vec<Warning>,
+    ) -> Feedback {
         let mut feedback = Feedback::default();
 
         if let Compilation::Yes(compiled_modules) = compilation {
@@ -145,7 +165,7 @@ impl FeedbackBookKeeper {
         warnings: Vec<Warning>,
     ) -> Feedback {
         let diagnostics = error.to_diagnostics();
-        let mut feedback = self.response(compilation, warnings);
+        let mut feedback = self.compilation_response(compilation, warnings);
 
         // A new error means that any existing errors are no longer valid.
         // Unset them.
@@ -172,7 +192,7 @@ impl FeedbackBookKeeper {
             }
         }
 
-        feedback
+        self.finish_compilation_feedback(feedback)
     }
 
     pub fn error(&mut self, error: Error) -> Feedback {
@@ -193,7 +213,7 @@ impl FeedbackBookKeeper {
         if let Some(diagnostic) = self.skipped_files_diagnostics.get(&file) {
             feedback.append_diagnostic(file, diagnostic.clone());
         }
-        feedback
+        self.finish_compilation_feedback(feedback)
     }
 
     pub fn close_file(&mut self, file: &Utf8PathBuf) -> Feedback {
@@ -201,6 +221,54 @@ impl FeedbackBookKeeper {
         let mut feedback = Feedback::none();
         if self.skipped_files_diagnostics.contains_key(file) {
             feedback.unset_existing_diagnostics(file.clone());
+        }
+        self.finish_compilation_feedback(feedback)
+    }
+
+    /// Update filename validation without changing the last compilation result.
+    /// `None` clears the filename diagnostic, retaining compiler diagnostics.
+    pub fn update_module_filename(
+        &mut self,
+        path: Utf8PathBuf,
+        diagnostic: Option<Diagnostic>,
+    ) -> Feedback {
+        match diagnostic {
+            Some(diagnostic) => {
+                _ = self
+                    .module_filename_diagnostics
+                    .insert(path.clone(), diagnostic);
+            }
+            None => {
+                if self.module_filename_diagnostics.remove(&path).is_none() {
+                    return Feedback::none();
+                }
+            }
+        }
+        let mut diagnostics = self
+            .compilation_diagnostics
+            .get(&path)
+            .cloned()
+            .unwrap_or_default();
+        diagnostics.extend(self.module_filename_diagnostics.get(&path).cloned());
+        Feedback {
+            diagnostics: HashMap::from([(path, diagnostics)]),
+            messages: vec![],
+        }
+    }
+
+    /// Store compilation-only updates before adding filename diagnostics. Call
+    /// once at each public compilation/open/close boundary, so filename errors
+    /// never become part of the cached compilation result.
+    fn finish_compilation_feedback(&mut self, mut feedback: Feedback) -> Feedback {
+        for (path, diagnostics) in &mut feedback.diagnostics {
+            if diagnostics.is_empty() {
+                _ = self.compilation_diagnostics.remove(path);
+            } else {
+                _ = self
+                    .compilation_diagnostics
+                    .insert(path.clone(), diagnostics.clone());
+            }
+            diagnostics.extend(self.module_filename_diagnostics.get(path).cloned());
         }
         feedback
     }
@@ -218,6 +286,191 @@ mod tests {
         type_,
     };
     use src_span::SrcSpan;
+
+    fn diagnostic(title: &str, level: Level) -> Diagnostic {
+        Diagnostic {
+            title: title.into(),
+            text: title.into(),
+            level,
+            location: None,
+            hint: None,
+        }
+    }
+
+    fn warning(path: &camino::Utf8Path) -> Warning {
+        Warning::Type {
+            path: path.to_path_buf(),
+            src: "src".into(),
+            warning: Box::new(type_::Warning::NoFieldsRecordUpdate {
+                location: SrcSpan::new(1, 2),
+            }),
+        }
+    }
+
+    #[test]
+    fn filename_updates_preserve_compilation_errors_and_warnings() {
+        let path = Utf8PathBuf::from("src/Invalid.gleam");
+        let warning = warning(&path);
+        let error = Error::Parse {
+            path: path.clone(),
+            src: "blah".into(),
+            error: Box::new(ParseError {
+                error: ParseErrorType::ConcatPatternVariableLeftHandSide,
+                location: SrcSpan::new(1, 4),
+            }),
+        };
+        let mut book_keeper = FeedbackBookKeeper::default();
+        let compilation = book_keeper
+            .build_with_error(error, Compilation::Yes(vec![]), vec![warning])
+            .diagnostics
+            .get(&path)
+            .expect("Diagnostics for the changed file")
+            .as_slice()
+            .to_vec();
+        let filename = diagnostic("Invalid module name", Level::Error);
+        let mut combined = compilation.clone();
+        combined.push(filename.clone());
+        assert_eq!(
+            book_keeper
+                .update_module_filename(path.clone(), Some(filename.clone()))
+                .diagnostics
+                .get(&path)
+                .expect("Diagnostics for the changed file")
+                .as_slice(),
+            combined,
+        );
+        // Revalidating an edited file must not duplicate its filename error.
+        assert_eq!(
+            book_keeper
+                .update_module_filename(path.clone(), Some(filename))
+                .diagnostics
+                .get(&path)
+                .expect("Diagnostics for the changed file")
+                .as_slice(),
+            combined,
+        );
+        assert_eq!(
+            book_keeper
+                .update_module_filename(path.clone(), None)
+                .diagnostics
+                .get(&path)
+                .expect("Diagnostics for the changed file")
+                .as_slice(),
+            compilation,
+        );
+        assert_eq!(
+            book_keeper.update_module_filename(path, None),
+            Feedback::none()
+        );
+    }
+
+    #[test]
+    fn compilation_updates_and_clears_preserve_filename_diagnostics() {
+        let path = Utf8PathBuf::from("src/Invalid.gleam");
+        let filename = diagnostic("Invalid module name", Level::Error);
+        let warning = warning(&path);
+        let mut book_keeper = FeedbackBookKeeper::default();
+        _ = book_keeper.update_module_filename(path.clone(), Some(filename.clone()));
+        assert_eq!(
+            book_keeper
+                .response(Compilation::Yes(vec![path.clone()]), vec![warning.clone()])
+                .diagnostics
+                .get(&path)
+                .expect("Diagnostics for the changed file")
+                .as_slice(),
+            vec![warning.to_diagnostic(), filename.clone()],
+        );
+        assert_eq!(
+            book_keeper
+                .response(Compilation::Yes(vec![path.clone()]), vec![])
+                .diagnostics
+                .get(&path)
+                .expect("Diagnostics for the changed file")
+                .as_slice(),
+            vec![filename],
+        );
+        assert!(
+            book_keeper
+                .update_module_filename(path.clone(), None)
+                .diagnostics
+                .get(&path)
+                .expect("Diagnostics for the changed file")
+                .as_slice()
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn failed_compilation_merges_filename_diagnostics_once() {
+        let path = Utf8PathBuf::from("src/Invalid.gleam");
+        let filename = diagnostic("Invalid module name", Level::Error);
+        let warning = warning(&path);
+        let mut book_keeper = FeedbackBookKeeper::default();
+        _ = book_keeper.update_module_filename(path.clone(), Some(filename.clone()));
+        let feedback = book_keeper.build_with_error(
+            Error::Gzip("failure".into()),
+            Compilation::Yes(vec![]),
+            vec![warning.clone()],
+        );
+        assert_eq!(
+            feedback
+                .diagnostics
+                .get(&path)
+                .expect("Diagnostics for the changed file")
+                .as_slice(),
+            vec![warning.to_diagnostic(), filename]
+        );
+        assert_eq!(feedback.messages.len(), 1);
+        assert_eq!(
+            book_keeper
+                .update_module_filename(path.clone(), None)
+                .diagnostics
+                .get(&path)
+                .expect("Diagnostics for the changed file")
+                .as_slice(),
+            vec![warning.to_diagnostic()],
+        );
+    }
+
+    #[test]
+    fn opening_and_closing_skipped_file_preserves_filename_diagnostic() {
+        let path = Utf8PathBuf::from("src/Invalid.gleam");
+        let filename = diagnostic("Invalid module name", Level::Error);
+        let skipped = diagnostic("Dependency failed to compile", Level::Error);
+        let mut book_keeper = FeedbackBookKeeper::default();
+        // Set up a file skipped because a dependency failed to compile.
+        _ = book_keeper
+            .skipped_files_diagnostics
+            .insert(path.clone(), skipped.clone());
+        let mut feedback = book_keeper.update_module_filename(path.clone(), Some(filename.clone()));
+        feedback.append_feedback(book_keeper.open_file(path.clone()));
+        assert_eq!(
+            feedback
+                .diagnostics
+                .get(&path)
+                .expect("Diagnostics for the changed file")
+                .as_slice(),
+            vec![skipped, filename.clone()]
+        );
+        assert_eq!(
+            book_keeper
+                .close_file(&path)
+                .diagnostics
+                .get(&path)
+                .expect("Diagnostics for the changed file")
+                .as_slice(),
+            vec![filename]
+        );
+        assert!(
+            book_keeper
+                .update_module_filename(path.clone(), None)
+                .diagnostics
+                .get(&path)
+                .expect("Diagnostics for the changed file")
+                .as_slice()
+                .is_empty()
+        );
+    }
 
     #[test]
     fn feedback() {
