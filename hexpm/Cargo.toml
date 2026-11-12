@@ -41,5 +41,5 @@ thiserror.workspace = true
 toml = "1.1"
 
 [build-dependencies]
-# Protobuf codegen
-prost-build = "0"
+# Protobuf codegen, uncomment when regenerating
+#prost-build = "0"
