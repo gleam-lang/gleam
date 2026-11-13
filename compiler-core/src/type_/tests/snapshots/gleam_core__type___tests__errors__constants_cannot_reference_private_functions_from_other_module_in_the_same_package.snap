@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "import wibble\n\npub const woo = wibble.private\n"
+---
+----- SOURCE CODE
+-- wibble.gleam
+fn private() { 2 }
+
+-- main.gleam
+import wibble
+
+pub const woo = wibble.private
+
+
+----- ERROR
+error: Use of private value
+  ┌─ /src/one/two.gleam:3:17
+  │
+3 │ pub const woo = wibble.private
+  │                 ^^^^^^^^^^^^^^
+
+`wibble` does define `private`, but it is private and cannot be accessed by
+other modules.
