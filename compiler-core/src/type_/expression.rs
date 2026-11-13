@@ -2474,6 +2474,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let mut typed_clauses = Vec::with_capacity(clauses.len());
         let mut has_a_guard = false;
         let mut all_patterns_are_discards = true;
+
         // NOTE: if there are 0 clauses then there are 0 panics
         let mut all_clauses_panic = !clauses.is_empty();
         let mut patterns_typechecked_successfully = true;
@@ -2523,11 +2524,37 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // This is the only case were it actually makes sense to match on a
         // constant value so when checking, we won't emit warnings for matching
         // on a literal value in this case.
-        let case_used_like_if = all_patterns_are_discards && has_a_guard;
+        let has_a_single_nil_subject = typed_subjects.len() == 1
+            && typed_subjects
+                .first()
+                .is_some_and(|first| first.type_().is_nil());
+
+        let case_used_like_if =
+            has_a_guard && (all_patterns_are_discards || has_a_single_nil_subject);
+
         typed_subjects
             .iter()
             .filter_map(|subject| check_subject_for_redundant_match(subject, case_used_like_if))
             .for_each(|warning| self.problems.warning(warning));
+
+        // If the case is used like an if and it has a single nil subject we
+        // want to raise a warning on explicit matches on Nil, prompting to
+        // rewrite those as `_`.
+        if case_used_like_if && has_a_single_nil_subject {
+            for clause in &typed_clauses {
+                for alternative in clause.patterns() {
+                    let Some(first_subject) = alternative.first() else {
+                        continue;
+                    };
+                    if first_subject.is_nil() {
+                        self.problems
+                            .warning(Warning::NilPatternInCaseUsedLikeAnIf {
+                                location: first_subject.location(),
+                            });
+                    }
+                }
+            }
+        }
 
         TypedExpr::Case {
             location,

@@ -1,0 +1,28 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn wibble(wobble) {\n  case Nil {\n    Nil if wobble -> 1\n    _ if !wobble && wobble -> 2\n    Nil -> 3\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn wibble(wobble) {
+  case Nil {
+    Nil if wobble -> 1
+    _ if !wobble && wobble -> 2
+    Nil -> 3
+  }
+}
+
+
+----- WARNING
+warning: Unnecessary Nil pattern
+  ┌─ /src/warning/wrn.gleam:4:5
+  │
+4 │     Nil if wobble -> 1
+  │     ^^^ This pattern can be replaced with a `_`.
+
+
+warning: Unnecessary Nil pattern
+  ┌─ /src/warning/wrn.gleam:6:5
+  │
+6 │     Nil -> 3
+  │     ^^^ This pattern can be replaced with a `_`.
