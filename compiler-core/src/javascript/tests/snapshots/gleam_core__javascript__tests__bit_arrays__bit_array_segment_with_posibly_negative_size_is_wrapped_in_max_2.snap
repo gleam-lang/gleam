@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\npub fn go(bits, size) {\n  <<bits:bits-size(size * 11)>>\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(bits, size) {
+  <<bits:bits-size(size * 11)>>
+}
+
+
+----- COMPILED JAVASCRIPT
+import { toBitArray, bitArraySlice } from "../gleam.mjs";
+
+export function go(bits, size) {
+  return toBitArray([bitArraySlice(bits, 0, Math.max(0, size * 11))]);
+}

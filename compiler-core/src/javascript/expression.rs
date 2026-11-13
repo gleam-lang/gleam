@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2021 The Gleam contributors
 
 use num_bigint::BigInt;
+use num_traits::Signed;
 use vec1::Vec1;
 
 use super::{decision::ASSIGNMENT_VAR, *};
@@ -588,19 +589,7 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
 
                 let document = match details.type_ {
                     BitArraySegmentType::BitArray => {
-                        if segment.size().is_some() {
-                            self.tracker.bit_array_slice_used = true;
-                            docvec![
-                                arena,
-                                BIT_ARRAY_SLICE_OPEN_PAREN_DOCUMENT,
-                                value,
-                                COMMA_ZERO_COMMA_SPACE,
-                                details.size,
-                                CLOSE_PAREN_DOCUMENT
-                            ]
-                        } else {
-                            value
-                        }
+                        self.bit_array_segment_document(arena, segment, value, &details)
                     }
                     BitArraySegmentType::Int => {
                         match (details.size_value, segment.value.as_ref()) {
@@ -2886,19 +2875,7 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
 
                 let document = match details.type_ {
                     BitArraySegmentType::BitArray => {
-                        if segment.size().is_some() {
-                            self.tracker.bit_array_slice_used = true;
-                            docvec![
-                                arena,
-                                BIT_ARRAY_SLICE_OPEN_PAREN_DOCUMENT,
-                                value,
-                                COMMA_ZERO_COMMA_SPACE,
-                                details.size,
-                                CLOSE_PAREN_DOCUMENT
-                            ]
-                        } else {
-                            value
-                        }
+                        self.bit_array_segment_document(arena, segment, value, &details)
                     }
                     BitArraySegmentType::Int => {
                         match (details.size_value, segment.value.as_ref()) {
@@ -3027,6 +3004,55 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
             arena,
             TO_BIT_ARRAY_OPEN_PAREN_DOCUMENT,
             segments_array,
+            CLOSE_PAREN_DOCUMENT
+        ]
+    }
+
+    /// This produces the document for a bit array segment with bit array type.
+    /// This makes sure that the bit_array_slice function is called correctly
+    /// (if at all).
+    fn bit_array_segment_document<A, B>(
+        &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        segment: &BitArraySegment<A, B>,
+        segment_document: Document<'a, 'doc>,
+        segment_details: &BitArraySegmentDetails<'a, 'doc>,
+    ) -> Document<'a, 'doc> {
+        // If there's no explicit size, it means we have to use the whole bit
+        // array as the segment. We only need to return its value and nothing
+        // else.
+        if segment.size().is_none() {
+            return segment_document;
+        }
+
+        // Otherwise there's a size: we need to take a slice of that size from
+        // the bit array in `segment_document`.
+        self.tracker.bit_array_slice_used = true;
+        let size = match segment_details.size_value.as_ref() {
+            // The size must always be positive, so if it is a constant negative
+            // number we can immediately replace it with a 0
+            Some(size) if size.is_negative() => ZERO_DOCUMENT,
+            // If it is a positive constant we can just use that.
+            Some(_) => segment_details.size,
+            // Otherwise it could be some arbitrary expression that we need to
+            // wrap in a call to `Math.max(0, the_size)` to make sure we never
+            // pick a negative number.
+            None => {
+                docvec![
+                    arena,
+                    "Math.max(0, ",
+                    segment_details.size,
+                    CLOSE_PAREN_DOCUMENT
+                ]
+            }
+        };
+
+        docvec![
+            arena,
+            BIT_ARRAY_SLICE_OPEN_PAREN_DOCUMENT,
+            segment_document,
+            COMMA_ZERO_COMMA_SPACE,
+            size,
             CLOSE_PAREN_DOCUMENT
         ]
     }

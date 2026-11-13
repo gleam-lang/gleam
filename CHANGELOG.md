@@ -349,6 +349,10 @@
   in between a function and its documentation.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the compiler would generate invalid code for bit array
+  segments with a negative size on the JavaScript target.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Fixed a typo in a compiler error message for missing type arguments.
   ([Tomas Vemola](https://github.com/vemolista))
 
