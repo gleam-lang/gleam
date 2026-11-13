@@ -2646,31 +2646,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         .suggest_modules(module_alias, Imported::Value(label.clone())),
                 })?;
 
-            let constructor = match module.values.get(&label) {
-                Some(constructor) if constructor.publicity.is_importable() => constructor,
-                // If the value belongs to current package, but isn't importable,
-                // then we produce error message about usage of private value.
-                Some(_) if self.environment.current_package == module.package => {
-                    return Err(Error::PrivateValueUse {
-                        location: select_location,
-                        name: label.clone(),
-                        module_name: module.name.clone(),
-                    });
-                }
-                // Otherwise, the value either doesn't exist or is from another
-                // module, where we do not want to expose information, we produce
-                // error message about usage of unknown value.
-                Some(_) | None => {
-                    return Err(Error::UnknownModuleValue {
-                        location: select_location,
-                        name: label.clone(),
-                        module_name: module.name.clone(),
-                        value_constructors: module.public_value_names(),
-                        type_with_same_name: module.get_importable_type(&label).is_some(),
-                        context: ModuleValueUsageContext::UnqualifiedImport,
-                    });
-                }
-            };
+            let current_package = &self.environment.current_package;
+            let constructor = resolve_module_constructor(
+                module,
+                label.clone(),
+                select_location,
+                current_package.clone(),
+            )?;
 
             // Emit a warning if the value being used is deprecated.
             if let Deprecation::Deprecated { message } = &constructor.deprecation {
@@ -3435,18 +3417,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     .references
                     .register_module_reference_by_alias(module_name.clone());
 
-                module
-                    .values
-                    .get(name)
-                    .cloned()
-                    .ok_or_else(|| Error::UnknownModuleValue {
-                        location: *location,
-                        module_name: module_name.clone(),
-                        name: name.clone(),
-                        value_constructors: module.public_value_names(),
-                        type_with_same_name: module.get_importable_type(name).is_some(),
-                        context: ModuleValueUsageContext::ModuleAccess,
-                    })?
+                resolve_module_constructor(
+                    module,
+                    name.clone(),
+                    *location,
+                    self.environment.current_package.clone(),
+                )
+                .cloned()?
             }
         };
 
@@ -4617,6 +4594,40 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 }
             }
         }
+    }
+}
+
+/// Given the module a constructor should come from and the name of the
+/// constructor, this returns it.
+///
+/// This will return an error if the value cannot be imported.
+///
+pub(crate) fn resolve_module_constructor(
+    module: &ModuleInterface,
+    constructors_name: EcoString,
+    select_location: SrcSpan,
+    current_package: EcoString,
+) -> Result<&ValueConstructor, Error> {
+    match module.values.get(&constructors_name) {
+        Some(constructor) if constructor.publicity.is_importable() => Ok(constructor),
+        // If the value belongs to current package, but isn't importable,
+        // then we produce an error message about usage of a private value.
+        Some(_) if current_package == module.package => Err(Error::PrivateValueUse {
+            location: select_location,
+            name: constructors_name.clone(),
+            module_name: module.name.clone(),
+        }),
+        // Otherwise, the value either doesn't exist or is from another
+        // module, where we do not want to expose information, we produce
+        // error message about usage of unknown value.
+        Some(_) | None => Err(Error::UnknownModuleValue {
+            location: select_location,
+            type_with_same_name: module.get_importable_type(&constructors_name).is_some(),
+            name: constructors_name,
+            module_name: module.name.clone(),
+            value_constructors: module.public_value_names(),
+            context: ModuleValueUsageContext::UnqualifiedImport,
+        }),
     }
 }
 

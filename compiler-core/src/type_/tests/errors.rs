@@ -3571,6 +3571,102 @@ pub fn go(value: Type) {
 }
 
 #[test]
+fn constants_cannot_use_opaque_type_constructor_from_module_in_the_same_package() {
+    assert_module_error!(
+        ("wibble", "pub opaque type Wibble { Wobble(Int) }"),
+        "import wibble
+
+pub const woo = wibble.Wobble(1)
+"
+    );
+}
+
+#[test]
+fn constants_cannot_use_opaque_type_constructor_from_module_from_a_dependency() {
+    assert_module_error!(
+        (
+            "another_package",
+            "wibble",
+            "pub opaque type Wibble { Wobble(Int) }"
+        ),
+        "import wibble
+
+pub const woo = wibble.Wobble(1)
+"
+    );
+}
+
+#[test]
+fn constants_cannot_reference_private_functions_from_other_module_in_the_same_package() {
+    assert_module_error!(
+        ("wibble", "fn private() { 2 }"),
+        "import wibble
+
+pub const woo = wibble.private
+"
+    );
+}
+
+#[test]
+fn constants_cannot_reference_private_functions_from_other_module_in_different_package() {
+    assert_module_error!(
+        ("another_package", "wibble", "fn private() { 2 }"),
+        "import wibble
+
+pub const woo = wibble.private
+"
+    );
+}
+
+#[test]
+fn constants_cannot_reference_private_constructor_from_other_module_in_the_same_package() {
+    assert_module_error!(
+        ("wibble", "type Wibble { Wobble }"),
+        "import wibble
+
+pub const woo = wibble.Wobble
+"
+    );
+}
+
+#[test]
+fn constants_cannot_reference_private_constructor_from_other_module_in_different_package() {
+    assert_module_error!(
+        ("another_package", "wibble", "type Wibble { Wobble }"),
+        "import wibble
+
+pub const woo = wibble.Wobble
+"
+    );
+}
+
+#[test]
+fn constants_cannot_reference_opaque_constructor_from_other_module_in_the_same_package() {
+    assert_module_error!(
+        ("wibble", "pub opaque type Wibble { Wobble }"),
+        "import wibble
+
+pub const woo = wibble.Wobble
+"
+    );
+}
+
+#[test]
+fn constants_cannot_reference_opaque_constructor_from_other_module_in_different_package() {
+    assert_module_error!(
+        (
+            "another_package",
+            "wibble",
+            "pub opaque type Wibble { Wobble }"
+        ),
+        "import wibble
+
+pub const woo = wibble.Wobble
+"
+    );
+}
+
+#[test]
 fn record_update_does_not_stop_at_first_invalid_field_1() {
     assert_module_error!(
         "
