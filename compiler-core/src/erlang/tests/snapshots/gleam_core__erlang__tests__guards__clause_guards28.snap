@@ -34,7 +34,7 @@ main() ->
         _ when X =:= {test, 2, 2.0} ->
             2;
 
-        _ when X =/= {test, 2, 3.0} ->
+        _ when X /= {test, 2, 3.0} ->
             2;
 
         _ ->
