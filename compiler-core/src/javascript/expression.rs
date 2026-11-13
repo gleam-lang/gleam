@@ -604,7 +604,12 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
                     }
                     BitArraySegmentType::Int => {
                         match (details.size_value, segment.value.as_ref()) {
-                            (Some(size_value), _) if size_value <= 0.into() => return None,
+                            (Some(size_value), value)
+                                if size_value <= BigInt::ZERO
+                                    && value.is_pure_value_constructor() =>
+                            {
+                                return None;
+                            }
 
                             (Some(size_value), TypedExpr::Int { int_value, .. })
                                 if size_value <= SAFE_INT_SEGMENT_MAX_SIZE.into()

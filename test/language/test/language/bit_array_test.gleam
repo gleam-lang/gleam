@@ -4,6 +4,17 @@
 import ffi
 import gleam/bit_array
 
+fn impure_value(reference: ffi.MutableReference(Bool)) {
+  ffi.set_mutable_reference(reference, True)
+  11
+}
+
+pub fn int_segment_with_size_zero_calling_an_impure_function_test() {
+  let reference = ffi.new_mutable_reference(False)
+  assert <<1, 2, 3>> == <<1, impure_value(reference):size(0), 2, 3>>
+  assert ffi.get_mutable_reference(reference)
+}
+
 pub fn utf8_emoji_equal_test() {
   let left = <<"Gleam":utf8, "👍":utf8>>
   let right = <<"Gleam":utf8, "👍":utf8>>
