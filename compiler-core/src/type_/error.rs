@@ -1281,6 +1281,24 @@ pub enum Warning {
     EmptyStringBitArraySegment {
         location: SrcSpan,
     },
+    /// This happens when there's an explicit `Nil` pattern in a case expression
+    /// that's used like an if expression: that is, it is matching on the
+    /// literal Nil just to have something to match on and evaluate some guarded
+    /// conditions:
+    ///
+    /// ```gleam
+    /// case Nil {
+    ///   _ if wibble -> todo
+    ///   Nil if wobble -> todo
+    /// //^^^ We want to have a consistent style and only use `_` here, so the
+    /// //    warning will be raised on this pattern.
+    ///   _ -> todo
+    /// }
+    /// ```
+    ///
+    NilPatternInCaseUsedLikeAnIf {
+        location: SrcSpan,
+    },
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
@@ -1521,6 +1539,7 @@ impl Warning {
     pub(crate) fn location(&self) -> SrcSpan {
         match self {
             Warning::Todo { location, .. }
+            | Warning::NilPatternInCaseUsedLikeAnIf { location }
             | Warning::ImplicitlyDiscardedResult { location, .. }
             | Warning::UnusedLiteral { location, .. }
             | Warning::UnusedValue { location, .. }

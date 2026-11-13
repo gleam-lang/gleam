@@ -1590,6 +1590,21 @@ an error in a future version.",
                         extra_labels: vec![],
                     }),
                 },
+                type_::Warning::NilPatternInCaseUsedLikeAnIf { location } => Diagnostic {
+                    title: "Unnecessary Nil pattern".into(),
+                    text: "".into(),
+                    hint: None,
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        label: diagnostic::Label {
+                            text: Some("This pattern can be replaced with a `_`.".into()),
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.clone(),
+                        extra_labels: vec![],
+                    }),
+                },
             },
 
             Warning::EmptyModule { path: _, name } => Diagnostic {

@@ -349,6 +349,10 @@
   in between a function and its documentation.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the compiler would show a warning when pattern matching on
+  the literal value `Nil` in a case expression with guards.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Fixed a typo in a compiler error message for missing type arguments.
   ([Tomas Vemola](https://github.com/vemolista))
 

@@ -5283,3 +5283,44 @@ pub fn go(a) {
 "
     );
 }
+
+#[test]
+fn useless_match_on_nil_raises_warning_on_the_subject() {
+    assert_warning!(
+        "
+pub fn wibble() {
+  case Nil {
+    Nil -> 1
+  }
+}
+"
+    );
+}
+
+#[test]
+fn useless_match_on_nil_raises_warning_on_the_subject_even_with_catch_all_pattern() {
+    assert_warning!(
+        "
+pub fn wibble() {
+  case Nil {
+    _ -> 1
+  }
+}
+"
+    );
+}
+
+#[test]
+fn when_matching_on_nil_for_a_guard_the_warning_is_on_the_patterns_rather_than_the_subject() {
+    assert_warning!(
+        "
+pub fn wibble(wobble) {
+  case Nil {
+    Nil if wobble -> 1
+    _ if !wobble && wobble -> 2
+    Nil -> 3
+  }
+}
+"
+    );
+}

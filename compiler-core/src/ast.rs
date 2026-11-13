@@ -3335,6 +3335,25 @@ impl TypedPattern {
             (Pattern::Invalid { .. }, _) => false,
         }
     }
+
+    pub(crate) fn is_nil(&self) -> bool {
+        match self {
+            Pattern::Assign { pattern, .. } => pattern.is_nil(),
+            Pattern::Int { .. }
+            | Pattern::Float { .. }
+            | Pattern::String { .. }
+            | Pattern::Variable { .. }
+            | Pattern::BitArraySize { .. }
+            | Pattern::Discard { .. }
+            | Pattern::List { .. }
+            | Pattern::Tuple { .. }
+            | Pattern::BitArray { .. }
+            | Pattern::StringPrefix { .. }
+            | Pattern::Invalid { .. } => false,
+
+            Pattern::Constructor { type_, .. } => type_.is_nil(),
+        }
+    }
 }
 
 /// A variable bound inside a pattern.
