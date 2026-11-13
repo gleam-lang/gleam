@@ -20,7 +20,7 @@ pub fn main(args) {
 -spec main(any()) -> integer().
 main(Args) ->
     case Args of
-        X when (X =/= X) =:= (Args =:= Args) ->
+        X when (X /= X) =:= (Args =:= Args) ->
             1;
 
         _ ->
