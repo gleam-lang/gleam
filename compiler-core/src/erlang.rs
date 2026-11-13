@@ -3224,7 +3224,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                     BinOp::Or => "orelse",
                     BinOp::And => "andalso",
                     BinOp::Eq => "=:=",
-                    BinOp::NotEq => "=/=",
+                    BinOp::NotEq => "/=",
                     BinOp::GtInt | BinOp::GtFloat => ">",
                     BinOp::GtEqInt | BinOp::GtEqFloat => ">=",
                     BinOp::LtInt | BinOp::LtFloat => "<",

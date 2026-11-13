@@ -552,6 +552,18 @@ pub fn module_access_custom_type_const_nomatch_test() {
     }
 }
 
+// https://github.com/gleam-lang/gleam/issues/6508
+pub fn zero_and_negative_zero_are_equal_in_guards_test() {
+  let zero = 0.0
+  let negative_zero = -0.0
+
+  case Nil {
+    _ if zero != negative_zero ->
+      panic as "0.0 and -0.0 were treated as different"
+    _ -> Nil
+  }
+}
+
 // https://github.com/gleam-lang/gleam/issues/5283
 pub fn case_with_guard_does_not_pollute_outer_scope_test() {
   let a = case 1337 {
