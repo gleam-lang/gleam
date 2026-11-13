@@ -365,6 +365,10 @@
   segments with a negative size on the JavaScript target.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the compiler would not error when using a constructor from
+  an opaque type in a constant defined in a different module.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Fixed a typo in a compiler error message for missing type arguments.
   ([Tomas Vemola](https://github.com/vemolista))
 
