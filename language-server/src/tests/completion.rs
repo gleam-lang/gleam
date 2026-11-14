@@ -2875,3 +2875,46 @@ fn completions_for_partial_internal_attribute() {
     // @int|ernal
     assert_completion!(TestProject::for_source(code), position);
 }
+
+#[test]
+fn applied_completions_for_partial_deprecated_attribute() {
+    let code = "@deprecated(\"This is a deprecated function\")\npub fn main() {}";
+    let position = Position::new(0, 4);
+
+    // @dep|recated
+    assert_apply_completion!(TestProject::for_source(code), "deprecated", position);
+}
+
+#[test]
+fn applied_completions_for_partial_external_attribute() {
+    let code = "@external(erlang, \"module\", \"function\")\npub fn main() {}";
+    let position = Position::new(0, 4);
+
+    // @ext|ernal
+    assert_apply_completion!(TestProject::for_source(code), "external", position);
+}
+
+#[test]
+fn applied_completions_for_partial_internal_attribute() {
+    let code = "@internal\npub fn main() {}";
+    let position = Position::new(0, 4);
+
+    // @int|ernal
+    assert_apply_completion!(TestProject::for_source(code), "internal", position);
+}
+
+#[test]
+fn attribute_completions_inside_function() {
+    let code = "pub fn main() {\n    @\n}";
+    let position = Position::new(1, 5);
+
+    let mut items = attribute_completion_items(code, position);
+    items.sort_by(|a, b| a.label.cmp(&b.label));
+
+    let output = format!(
+        "{}\n\n----- Completion content -----\n{}",
+        show_complete(code, position),
+        format_completion_results(items)
+    );
+    insta::assert_snapshot!(insta::internals::AutoName, output, code);
+}
