@@ -1,0 +1,11 @@
+---
+source: language-server/src/tests/completion.rs
+expression: "@internal\npub fn main() {}"
+---
+@int|ernal
+pub fn main() {}
+
+
+----- After applying completion -----
+@internal
+pub fn main() {}

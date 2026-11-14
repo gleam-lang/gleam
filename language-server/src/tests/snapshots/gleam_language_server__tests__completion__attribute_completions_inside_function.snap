@@ -1,0 +1,10 @@
+---
+source: language-server/src/tests/completion.rs
+expression: "pub fn main() {\n    @\n}"
+---
+pub fn main() {
+    @|
+}
+
+
+----- Completion content -----

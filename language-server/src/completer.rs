@@ -22,6 +22,7 @@ use gleam_core::{
     },
     build::{Module, Origin},
     parse::{LiteralFloatValue, parse_int_value},
+    parse::{Token, lexer::make_tokenizer},
     type_::{
         self, Deprecation, FieldMap, ModuleInterface, PRELUDE_MODULE_NAME, PreludeType,
         RecordAccessor, Type, TypeConstructor, ValueConstructorVariant, collapse_links,
@@ -507,6 +508,23 @@ impl<'a, IO> Completer<'a, IO> {
 
         if !prefix.chars().all(|c| c.is_ascii_alphabetic() || c == '_') {
             return None;
+        }
+
+        //Check if cursor is inside a function definition, no suggestions should be provided in that case
+        // Attributes are only suggested outside brace-delimited blocks.
+        let before_cursor = self.src.get(..cursor_offset as usize)?;
+        let mut brace_depth = 0u32;
+
+        for (_, token, _) in make_tokenizer(before_cursor).flatten() {
+            match token {
+                Token::LeftBrace => brace_depth += 1,
+                Token::RightBrace => brace_depth = brace_depth.saturating_sub(1),
+                _ => {}
+            }
+        }
+
+        if brace_depth > 0 {
+            return Some(Ok(Some(vec![])));
         }
 
         let surroundings =
