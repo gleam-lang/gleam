@@ -510,7 +510,8 @@ impl<'a, IO> Completer<'a, IO> {
             return None;
         }
 
-        //Check if cursor is inside a function definition, no suggestions should be provided in that case
+        // Check if cursor is inside a function definition, no suggestions should
+        // be provided in that case.
         // Attributes are only suggested outside brace-delimited blocks.
         let before_cursor = self.src.get(..cursor_offset as usize)?;
         let mut brace_depth = 0u32;
