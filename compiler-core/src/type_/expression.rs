@@ -4672,9 +4672,22 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 /// This will return an error if the value cannot be imported.
 ///
 pub(crate) fn resolve_module_constructor(
+    // This is the module we've inferred the constructor must come from.
     module: &ModuleInterface,
+    // This is the name of the constructor we're trying to use.
+    // In `wibble.Wobble` (qualified) and `Wobble` (unqualified) it's "Wobble".
     constructors_name: EcoString,
-    select_location: SrcSpan,
+    // This covers the expression accessing the module's constructor:
+    //
+    // ```gleam
+    //   wibble.Wobble
+    // //^^^^^^^^^^^^^ This if we're using a qualified value
+    //   Wobble
+    // //^^^^^^ Or just the value if it's unqualified
+    // ```
+    location: SrcSpan,
+    // The name of the package the code is in. This is used to provide better
+    // error messages for constructors that are defined by the same package.
     current_package: EcoString,
 ) -> Result<&ValueConstructor, Error> {
     match module.values.get(&constructors_name) {
@@ -4682,20 +4695,20 @@ pub(crate) fn resolve_module_constructor(
         // If the value belongs to current package, but isn't importable,
         // then we produce an error message about usage of a private value.
         Some(_) if current_package == module.package => Err(Error::PrivateValueUse {
-            location: select_location,
-            name: constructors_name.clone(),
             module_name: module.name.clone(),
+            name: constructors_name.clone(),
+            location,
         }),
         // Otherwise, the value either doesn't exist or is from another
         // module, where we do not want to expose information, we produce
         // error message about usage of unknown value.
         Some(_) | None => Err(Error::UnknownModuleValue {
-            location: select_location,
+            location,
             type_with_same_name: module.get_importable_type(&constructors_name).is_some(),
             name: constructors_name,
             module_name: module.name.clone(),
             value_constructors: module.public_value_names(),
-            context: ModuleValueUsageContext::UnqualifiedImport,
+            context: ModuleValueUsageContext::ModuleAccess,
         }),
     }
 }
