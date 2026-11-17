@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/version_bump/tests.rs
+expression: bump
+---
+-- BEFORE
+---- the_module
+pub fn pair(a: Int, b: Int) -> #(Int, Int) { #(a, b) }
+
+-- AFTER
+---- the_module
+pub fn pair(a: Float, b: Float) -> #(Float, Float) { #(a, b) }
+
+-- MAJOR
+
+== the_module ==
+- pub fn pair(Int, Int) -> #(Int, Int)
++ pub fn pair(Float, Float) -> #(Float, Float)

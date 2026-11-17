@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/version_bump/tests.rs
+expression: bump
+---
+-- BEFORE
+---- the_module
+type MyAlias = Int
+
+-- AFTER
+---- the_module
+type MyAlias = Float
+
+-- PATCH

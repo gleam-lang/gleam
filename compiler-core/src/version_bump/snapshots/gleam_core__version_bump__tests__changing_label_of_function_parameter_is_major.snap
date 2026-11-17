@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/version_bump/tests.rs
+expression: bump
+---
+-- BEFORE
+---- the_module
+pub fn add(first a, second b) { a + b }
+
+-- AFTER
+---- the_module
+pub fn add(this a, to b) { a + b }
+
+-- MAJOR
+
+== the_module ==
+- pub fn add(first: Int, second: Int) -> Int
++ pub fn add(this: Int, to: Int) -> Int

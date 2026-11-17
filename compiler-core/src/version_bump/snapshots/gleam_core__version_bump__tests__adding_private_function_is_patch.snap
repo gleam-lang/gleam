@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/version_bump/tests.rs
+expression: bump
+---
+-- BEFORE
+---- the_module
+
+
+-- AFTER
+---- the_module
+fn add(a, b) { a + b }
+
+-- PATCH

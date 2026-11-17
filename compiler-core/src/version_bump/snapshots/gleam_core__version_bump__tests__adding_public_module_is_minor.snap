@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/version_bump/tests.rs
+expression: bump
+---
+-- BEFORE
+---- wibble
+pub type Wibble
+
+-- AFTER
+---- wibble
+pub type Wibble
+
+---- wobble
+pub type Wobble
+
+-- MINOR
+
++ wobble

@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/version_bump/tests.rs
+expression: bump
+---
+-- BEFORE
+---- the_module
+
+pub type Wibble {
+  Wibble
+  Wobble
+}
+
+-- AFTER
+---- the_module
+
+pub type Wibble {
+  @deprecated("Use `Wobble` instead")
+  Wibble
+  Wobble
+}
+
+-- MINOR
+
+== the_module ==
+- pub type Wibble {
+-   Wibble
+-   Wobble
+- }
++ pub type Wibble {
++   @deprecated(...)
++   Wibble
++   Wobble
++ }

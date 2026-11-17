@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/version_bump/tests.rs
+expression: bump
+---
+-- BEFORE
+---- wibble
+pub type Wibble { Wibble Wobble }
+
+-- AFTER
+---- wobble
+pub type Wibble { Wibble Wobble }
+
+---- wibble
+
+import wobble
+pub type Wibble = wobble.Wibble
+
+-- MAJOR
+
+== wibble ==
+- pub type Wibble {
+-   Wibble
+-   Wobble
+- }
++ pub type Wibble = Wibble

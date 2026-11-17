@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/version_bump/tests.rs
+expression: bump
+---
+-- BEFORE
+---- the_module
+pub const max_size = 512
+
+-- AFTER
+---- the_module
+pub const max_size = 512.2
+
+-- MAJOR
+
+== the_module ==
+- pub const max_size: Int
++ pub const max_size: Float

@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/version_bump/tests.rs
+expression: bump
+---
+-- BEFORE
+---- the_module
+fn add(a, b) { a + b }
+
+-- AFTER
+---- the_module
+pub fn add(a, b) { a + b }
+
+-- MINOR
+
+== the_module ==
++ pub fn add

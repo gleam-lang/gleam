@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/version_bump/tests.rs
+expression: bump
+---
+-- BEFORE
+---- the_module
+
+@external(erlang, "wibble_ffi", "something")
+@external(javascript, "./wibble_ffi.mjs", "something")
+pub fn wibble() -> Nil
+
+-- AFTER
+---- the_module
+
+@external(erlang, "wibble_ffi", "something")
+@external(javascript, "./wibble_ffi.mjs", "something")
+pub fn wibble() -> Nil {
+  Nil
+}
+
+-- PATCH
