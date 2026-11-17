@@ -15,8 +15,9 @@ use camino::{Utf8Path, Utf8PathBuf};
 use debug_ignore::DebugIgnore;
 use gleam_core::{
     Result,
-    diagnostic::{Diagnostic, ExtraLabel, Level},
+    diagnostic::{Diagnostic, ExtraLabel, Label, Level, Location},
     io::{BeamCompilerIO, CommandExecutor, FileSystemReader, FileSystemWriter},
+    strings::is_valid_gleam_module_name,
 };
 use itertools::Itertools;
 use lsp_server::ResponseError;
@@ -27,7 +28,7 @@ use lsp_types::{
     WorkspaceOptions,
 };
 use serde_json::Value as Json;
-use src_span::LineNumbers;
+use src_span::{LineNumbers, SrcSpan};
 use std::collections::{HashMap, HashSet};
 
 /// This class is responsible for handling the language server protocol and
@@ -149,7 +150,7 @@ where
         self.publish_feedback(feedback)
     }
 
-    fn publish_feedback(&self, feedback: Feedback) -> Result<()> {
+    fn publish_feedback(&mut self, feedback: Feedback) -> Result<()> {
         self.publish_diagnostics(feedback.diagnostics)?;
         self.publish_messages(feedback.messages)?;
         Ok(())
@@ -289,25 +290,29 @@ where
             &mut LanguageServerEngine<IO, ConnectionProgressReporter<'a>>,
         ) -> engine::Response<Result<T, ResponseError>>,
     {
-        match self.router.project_for_path(path) {
+        match self.router.project_for_path(path.clone()) {
             Ok(Some(project)) => {
                 let engine::Response {
                     result,
                     warnings,
                     compilation,
                 } = handler(&mut project.engine);
+                let book_keeper = self
+                    .router
+                    .feedback_for_path(&path)
+                    .expect("An engine has a project feedback bookkeeper");
                 match result {
                     Ok(Ok(value)) => {
-                        let feedback = project.feedback.response(compilation, warnings);
+                        let feedback = book_keeper.response(compilation, warnings);
                         let json = serde_json::to_value(value).expect("response to json");
                         (Ok(json), feedback)
                     }
                     Ok(Err(error)) => {
-                        let feedback = project.feedback.response(compilation, warnings);
+                        let feedback = book_keeper.response(compilation, warnings);
                         (Err(error), feedback)
                     }
                     Err(e) => {
-                        let feedback = project.feedback.build_with_error(e, compilation, warnings);
+                        let feedback = book_keeper.build_with_error(e, compilation, warnings);
                         (Ok(Json::Null), feedback)
                     }
                 }
@@ -327,9 +332,9 @@ where
         path: Utf8PathBuf,
         error: gleam_core::Error,
     ) -> (Result<Json, ResponseError>, Feedback) {
-        let feedback = match self.router.project_for_path(path) {
-            Ok(Some(project)) => project.feedback.error(error),
-            Ok(None) | Err(_) => self.outside_of_project_feedback.error(error),
+        let feedback = match self.router.feedback_for_path(&path) {
+            Some(book_keeper) => book_keeper.error(error),
+            None => self.outside_of_project_feedback.error(error),
         };
         (Ok(Json::Null), feedback)
     }
@@ -490,15 +495,19 @@ where
     fn cache_file_in_memory(&mut self, path: Utf8PathBuf, text: String) -> Feedback {
         self.project_changed(&path);
         if let Err(error) = self.io.write_mem_cache(&path, &text) {
-            return self.outside_of_project_feedback.error(error);
+            return self.path_error_response(path, error).1;
         }
-        Feedback::none()
+        let diagnostic = self.validate_module_filename(&path, &text);
+        match self.router.feedback_for_path(&path) {
+            Some(feedback) => feedback.update_module_filename(path, diagnostic),
+            None => Feedback::none(),
+        }
     }
 
     fn discard_in_memory_cache(&mut self, path: Utf8PathBuf) -> Feedback {
         self.project_changed(&path);
         if let Err(error) = self.io.delete_mem_cache(&path) {
-            return self.outside_of_project_feedback.error(error);
+            return self.path_error_response(path, error).1;
         }
         Feedback::none()
     }
@@ -527,19 +536,77 @@ where
 
     fn source_file_opened(&mut self, path: Utf8PathBuf, text: String) -> Feedback {
         let mut feedback = self.cache_file_in_memory(path.clone(), text);
-        if let Ok(Some(project)) = self.router.project_for_path(path.clone()) {
-            feedback.append_feedback(project.feedback.open_file(path));
+        if let Some(book_keeper) = self.router.feedback_for_path(&path) {
+            feedback.append_feedback(book_keeper.open_file(path));
         }
         feedback
     }
 
     fn source_file_closed(&mut self, path: Utf8PathBuf) -> Feedback {
         let mut feedback = self.discard_in_memory_cache(path.clone());
-        if let Ok(Some(project)) = self.router.project_for_path(path.clone()) {
-            feedback.append_feedback(project.feedback.close_file(&path));
+        if let Some(book_keeper) = self.router.feedback_for_path(&path) {
+            feedback.append_feedback(book_keeper.close_file(&path));
         }
         feedback
     }
+
+    fn validate_module_filename(&self, path: &Utf8Path, source: &str) -> Option<Diagnostic> {
+        // Outside projects the language server may only provide formatting.
+        let project_root = self.router.project_path(path)?;
+        module_filename_diagnostic(&project_root, path, source)
+    }
+}
+
+fn module_filename_diagnostic(
+    project_root: &Utf8Path,
+    path: &Utf8Path,
+    source: &str,
+) -> Option<Diagnostic> {
+    let module_filename = path.file_name()?.strip_suffix(".gleam")?;
+    let relative = path.strip_prefix(project_root).ok()?;
+    let module = relative
+        .strip_prefix("src")
+        .or_else(|_| relative.strip_prefix("test"))
+        .or_else(|_| relative.strip_prefix("dev"))
+        .ok()?;
+    // Module names use forward slashes on every platform. Path iteration
+    // recognises the native separators before we construct the module name.
+    let module_name = module
+        .parent()?
+        .iter()
+        .chain(std::iter::once(module_filename))
+        .join("/");
+    let is_reserved = module_name == "gleam";
+    if is_valid_gleam_module_name(&module_name) && !is_reserved {
+        return None;
+    }
+
+    let error_message = if is_reserved {
+        "The `gleam` is the name of Gleam's prelude module so \
+         it cannot be used for a new module."
+    } else {
+        "Module names must be snake_case, starting with a lowercase letter \
+         and containing only lowercase letters, numbers, and underscores."
+    };
+
+    // Highlight the first line to ensure the diagnostic is visible in editors.
+    let first_line_end = source.find('\n').unwrap_or(source.len());
+    let span_end: u32 = first_line_end.try_into().unwrap_or(0);
+    Some(Diagnostic {
+        title: format!("{module_name} is not a valid module name"),
+        text: error_message.into(),
+        level: Level::Error,
+        location: Some(Location {
+            src: source.into(),
+            path: path.to_path_buf(),
+            label: Label {
+                text: None,
+                span: SrcSpan::new(0, span_end),
+            },
+            extra_labels: vec![],
+        }),
+        hint: None,
+    })
 }
 
 fn initialisation_handshake(connection: &lsp_server::Connection) -> Result<InitializeParams> {
@@ -775,3 +842,6 @@ fn path_to_uri(path: Utf8PathBuf) -> Url {
     file.push_str(&path.as_os_str().to_string_lossy());
     Url::parse(&file).expect("path_to_uri URL parse")
 }
+
+#[cfg(test)]
+mod tests;
