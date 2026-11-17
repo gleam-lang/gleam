@@ -25,7 +25,7 @@ error: Type mismatch
    ┌─ /src/one/two.gleam:10:3
    │
 10 │   other.greet(_, loud: True)
-   │   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │   ^^^^^^^^^^^
 
 This value is being called as a function but its type is:
 
