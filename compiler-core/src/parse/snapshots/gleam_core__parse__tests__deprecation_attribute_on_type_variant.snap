@@ -66,6 +66,7 @@ Parsed {
                 target: None,
             },
         ],
+        api_fingerprint: (),
         names: Names {
             local_types: {},
             imported_modules: {},
