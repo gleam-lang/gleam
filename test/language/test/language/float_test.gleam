@@ -239,3 +239,54 @@ pub fn negative_float_test() {
   assert one != other
   assert one *. -1.0 == other
 }
+
+// https://github.com/gleam-lang/gleam/issues/6508
+// This has a target annotation as JS has the opposite behaviour.
+@target(erlang)
+pub fn negative_zero_is_different_from_zero_in_expressions_on_erlang_test() {
+  assert 0.0 != -0.0
+  assert !{ 0.0 == -0.0 }
+}
+
+// This has a target annotation as JS has the opposite behaviour.
+@target(erlang)
+pub fn negative_zero_is_different_from_zero_in_guards_on_erlang_test() {
+  case Nil {
+    _ if 0.0 != -0.0 -> Nil
+    _ -> panic as "0.0 should not equal -0.0 on Erlang"
+  }
+  case Nil {
+    _ if !{ 0.0 == -0.0 } -> Nil
+    _ -> panic as "0.0 should not equal -0.0 on Erlang"
+  }
+}
+
+@target(erlang)
+pub fn negative_zero_is_different_from_zero_in_pattern_matching_on_erlang_test() {
+  let zero = 0.0
+  case zero {
+    -0.0 -> panic as "0.0 should not match with -0.0"
+    _ -> Nil
+  }
+
+  let negative = -0.0
+  case negative {
+    0.0 -> panic as "-0.0 should not match with 0.0"
+    _ -> Nil
+  }
+}
+
+pub fn not_equals_is_the_same_as_negating_equals_test() {
+  let zero = 0.0
+  let negative = -0.0
+  assert { zero != negative } == !{ zero == negative }
+}
+
+pub fn not_equals_is_the_same_as_negating_equals_in_guards_test() {
+  let zero = 0.0
+  let negative = -0.0
+  case Nil {
+    _ if { zero != negative } == !{ zero == negative } -> Nil
+    _ -> panic as "{ a != b } != !{ a == b }"
+  }
+}

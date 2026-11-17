@@ -1534,7 +1534,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                     }
 
                     BinOp::Eq => "=:=",
-                    BinOp::NotEq => "/=",
+                    BinOp::NotEq => "=/=",
                     BinOp::LtInt | BinOp::LtFloat => "<",
                     BinOp::LtEqInt | BinOp::LtEqFloat => "=<",
                     BinOp::GtInt | BinOp::GtFloat => ">",
@@ -2809,7 +2809,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             BinOp::LtInt | BinOp::LtFloat => "<",
             BinOp::LtEqInt | BinOp::LtEqFloat => "=<",
             BinOp::Eq => "=:=",
-            BinOp::NotEq => "/=",
+            BinOp::NotEq => "=/=",
             BinOp::GtInt | BinOp::GtFloat => ">",
             BinOp::GtEqInt | BinOp::GtEqFloat => ">=",
             BinOp::AddInt | BinOp::AddFloat => "+",

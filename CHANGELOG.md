@@ -353,6 +353,10 @@
   array segments with a zero size.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where `!=` would work differently on `Float`s in expression and in
+  guards.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Fixed a bug where the "Generate type" code action would put the generated type
   in between a function and its documentation.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
