@@ -825,7 +825,6 @@ fn provided_git_to_manifest() {
 fn provided_git_path_package_resolves_repo_relative_path() {
     let repo_root = fs::canonicalise(Utf8Path::new("./test")).unwrap();
     let result = resolve_git_path_package(
-        &"hello_world".into(),
         Utf8Path::new("../hello_world"),
         &"https://github.com/gleam-lang/wibble.git".into(),
         &repo_root.join("hello_world"),
@@ -964,7 +963,6 @@ fn provided_git_path_package_rejects_missing_directory() {
 
     let repo_root = fs::canonicalise(&repo).unwrap();
     let result = resolve_git_path_package(
-        &"missing".into(),
         Utf8Path::new("../missing"),
         &"https://github.com/gleam-lang/wibble.git".into(),
         &repo_root.join("parent"),
@@ -973,7 +971,6 @@ fn provided_git_path_package_rejects_missing_directory() {
     assert_eq!(
         result,
         Err(Error::GitDependencyPathNotFound {
-            package: "missing".into(),
             path: "../missing".into(),
             repo: "https://github.com/gleam-lang/wibble.git".into(),
         })
@@ -1029,7 +1026,6 @@ fn provided_git_path_package_rejects_escaping_path() {
 
     let repo_root = fs::canonicalise(&repo).unwrap();
     let result = resolve_git_path_package(
-        &"package_a".into(),
         Utf8Path::new("../../outside"),
         &"https://github.com/gleam-lang/wibble.git".into(),
         &repo_root.join("parent"),
@@ -1038,7 +1034,6 @@ fn provided_git_path_package_rejects_escaping_path() {
     assert_eq!(
         result,
         Err(Error::GitDependencyPathNotFound {
-            package: "package_a".into(),
             path: "../../outside".into(),
             repo: "https://github.com/gleam-lang/wibble.git".into(),
         })
@@ -1058,7 +1053,6 @@ fn provided_git_path_package_rejects_symlink_escaping_repo() {
 
     let repo_root = fs::canonicalise(&repo).unwrap();
     let result = resolve_git_path_package(
-        &"escape".into(),
         Utf8Path::new("../escape"),
         &"https://github.com/gleam-lang/wibble.git".into(),
         &repo_root.join("parent"),
@@ -1067,7 +1061,6 @@ fn provided_git_path_package_rejects_symlink_escaping_repo() {
     assert_eq!(
         result,
         Err(Error::GitDependencyPathNotFound {
-            package: "escape".into(),
             path: "../escape".into(),
             repo: "https://github.com/gleam-lang/wibble.git".into(),
         })
@@ -1109,6 +1102,20 @@ fn git_staging_path_is_clone_path_with_staging_suffix() {
 }
 
 #[test]
+fn git_name_resolution_path_is_clone_path_with_staging_suffix() {
+    let paths = ProjectPaths::new("/app".into());
+    let repo = "https://github.com/gleam-lang/gleam.git";
+    assert_eq!(
+        paths.build_git_repo(&git_repo_dir_name(repo)),
+        Utf8PathBuf::from("/app/build/git/gleam-ea2aeaa3761e8bc6")
+    );
+    assert_eq!(
+        git_name_resolution_path(&paths, repo),
+        Utf8PathBuf::from("/app/build/git/gleam-ea2aeaa3761e8bc6-name_resolution")
+    );
+}
+
+#[test]
 fn git_checkout_cleanup_deletes_staging_directory() {
     let tmp = tempfile::tempdir().unwrap();
     let base = Utf8PathBuf::from_path_buf(tmp.path().to_path_buf()).unwrap();
@@ -1116,21 +1123,13 @@ fn git_checkout_cleanup_deletes_staging_directory() {
     fs::mkdir(&staging_path).unwrap();
     fs::write(&staging_path.join("gleam.toml"), "name = \"wibble\"").unwrap();
 
-    let checkout = GitCheckout::Staged {
+    let checkout = GitCheckout {
         commit: "95cd2c2f45907e5571e9b5fcdfb27ff35cdcdd29".into(),
         staging_path: staging_path.clone(),
     };
     assert_eq!(checkout.cleanup(), Ok(()));
 
     assert!(!staging_path.exists());
-}
-
-#[test]
-fn git_checkout_cleanup_without_staging_is_noop() {
-    let checkout = GitCheckout::InPlace {
-        commit: "95cd2c2f45907e5571e9b5fcdfb27ff35cdcdd29".into(),
-    };
-    assert_eq!(checkout.cleanup(), Ok(()));
 }
 
 #[test]
