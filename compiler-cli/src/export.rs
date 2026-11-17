@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2022 The Gleam contributors
 
-use crate::fs::{self, ZipArchive};
+use crate::fs::{self, ConsoleWarningEmitter, ZipArchive};
 use camino::Utf8PathBuf;
 use gleam_core::{
     Result,
@@ -11,7 +11,7 @@ use gleam_core::{
     paths::ProjectPaths,
     type_::ModuleFunction,
 };
-use std::io::Cursor;
+use std::{io::Cursor, rc::Rc};
 
 static ENTRYPOINT_FILENAME_POWERSHELL: &str = "entrypoint.ps1";
 static ENTRYPOINT_FILENAME_POSIX_SHELL: &str = "entrypoint.sh";
@@ -137,8 +137,13 @@ pub(crate) fn erlang_shipment(paths: &ProjectPaths) -> Result<()> {
     fs::delete_directory(&build)?;
     fs::delete_directory(&out)?;
 
+    // Start the BEAM compiler to get the OTP version for the entrypoint
+    // scripts. The same instance is reused by the build below.
+    let io = fs::ProjectIO::new();
+    let otp_version = io.otp_version()?.to_string();
+
     // Build project in production mode
-    let built = crate::build::main(
+    let built = crate::build::main_with_warnings(
         paths,
         Options {
             root_target_support: TargetSupport::Enforced,
@@ -151,6 +156,8 @@ pub(crate) fn erlang_shipment(paths: &ProjectPaths) -> Result<()> {
             erlang_output: ErlangOutput::Binary,
         },
         crate::build::download_dependencies(paths, crate::cli::Reporter::new())?,
+        Rc::new(ConsoleWarningEmitter),
+        io,
     )?;
 
     for entry in fs::read_dir(&build)?.filter_map(Result::ok) {
@@ -182,6 +189,7 @@ pub(crate) fn erlang_shipment(paths: &ProjectPaths) -> Result<()> {
         &out.join(ENTRYPOINT_FILENAME_POWERSHELL),
         ENTRYPOINT_TEMPLATE_POWERSHELL,
         &built.root_package.config.name,
+        &otp_version,
     )?;
 
     // POSIX Shell entry point script.
@@ -189,6 +197,7 @@ pub(crate) fn erlang_shipment(paths: &ProjectPaths) -> Result<()> {
         &out.join(ENTRYPOINT_FILENAME_POSIX_SHELL),
         ENTRYPOINT_TEMPLATE_POSIX_SHELL,
         &built.root_package.config.name,
+        &otp_version,
     )?;
 
     crate::cli::print_exported(&built.root_package.config.name);
@@ -209,10 +218,13 @@ one of the following scripts:
 
 fn write_entrypoint_script(
     entrypoint_output_path: &Utf8PathBuf,
-    entrypoint_template_path: &str,
+    entrypoint_template: &str,
     package_name: &str,
+    otp_version: &str,
 ) -> Result<()> {
-    let text = entrypoint_template_path.replace("$PACKAGE_NAME_FROM_GLEAM", package_name);
+    let text = entrypoint_template
+        .replace("$PACKAGE_NAME_FROM_GLEAM", package_name)
+        .replace("$OTP_VERSION_FROM_GLEAM", otp_version);
     fs::write(entrypoint_output_path, &text)?;
     fs::make_executable(entrypoint_output_path)?;
     Ok(())

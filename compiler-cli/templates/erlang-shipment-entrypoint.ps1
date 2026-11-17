@@ -3,19 +3,24 @@ $ErrorActionPreference = "Stop"
 $PackageName = "$PACKAGE_NAME_FROM_GLEAM"
 $BaseDirectory = $PSScriptRoot
 $ScriptCommand = $args[0]
+$OtpVersion = "$OTP_VERSION_FROM_GLEAM"
+$OtpVersionCheck = "case list_to_atom(erlang:system_info(otp_release)) of '$OtpVersion' -> ok; V -> io:format(standard_error, 'warning: This Erlang shipment was built with Erlang/OTP $OtpVersion but you are running Erlang/OTP ~s.~nThe shipment may fail to run. Please use Erlang/OTP $OtpVersion or rebuild the shipment with your current version.~n', [V]) end"
 
 $CodePath = Join-Path -Path $BaseDirectory -ChildPath "\*\ebin" -Resolve
 
 function Run {
   erl `
     -pa $CodePath `
+    -eval $OtpVersionCheck `
     -eval "$PackageName@@main:run($PackageName)" `
     -noshell `
     -extra $args
 }
 
 function Shell {
-  erl -pa $CodePath
+  erl `
+    -pa $CodePath `
+    -eval $OtpVersionCheck
 }
 
 switch ($ScriptCommand) {

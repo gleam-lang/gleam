@@ -35,6 +35,7 @@ pub fn run(paths: &ProjectPaths) -> Result<()> {
         },
         build::download_dependencies(paths, cli::Reporter::new())?,
         warnings.clone(),
+        crate::fs::ProjectIO::new(),
     )?;
     let warnings = warnings.take();
 
