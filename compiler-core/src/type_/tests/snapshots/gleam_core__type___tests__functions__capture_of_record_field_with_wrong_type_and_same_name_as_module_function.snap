@@ -30,12 +30,3 @@ error: Type mismatch
 This value is being called as a function but its type is:
 
     Int
-
-error: Unexpected labelled argument
-   ┌─ /src/one/two.gleam:10:18
-   │
-10 │   other.greet(_, loud: True)
-   │                  ^^^^^^^^^^
-
-This argument has been given a label but the function does
-not expect any. Please remove the label `loud`.
