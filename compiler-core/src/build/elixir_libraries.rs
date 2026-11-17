@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 The Gleam contributors
 
+use camino::Utf8PathBuf;
+
 use crate::{
     Error,
     error::ShellCommandFailureReason,
     io::{Command, CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
 };
-use camino::Utf8PathBuf;
 
 #[cfg(not(target_os = "windows"))]
 const ELIXIR_EXECUTABLE: &str = "elixir";
@@ -126,7 +127,8 @@ where
                 self.io.delete_directory(&dest)?;
             }
             tracing::debug!("linking_{}_to_build", name,);
-            self.io.symlink_dir(&source, &dest)?;
+            self.io
+                .symlink_dir(&self.io.canonicalise(&source)?, &dest)?;
         }
 
         Ok(())
