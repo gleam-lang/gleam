@@ -1,0 +1,35 @@
+---
+source: language-server/src/tests/action.rs
+expression: "pub fn go(wibbles) {\n  case wibbles {\n    [Wibble(int, b), c, ..rest] -> todo\n    [Wobble(a:, b:)] -> todo\n    rest -> todo\n  }\n}\n\ntype Wibble {\n  Wibble(Int, Wibble)\n  Wobble(a: Int, b: Wibble)\n  Woo\n}\n"
+---
+----- BEFORE ACTION
+pub fn go(wibbles) {
+  case wibbles {
+    [Wibble(int, b), c, ..rest] -> todo
+     ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+    [Wobble(a:, b:)] -> todo
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+    rest -> todo
+▔▔▔▔↑           
+  }
+}
+
+type Wibble {
+  Wibble(Int, Wibble)
+  Wobble(a: Int, b: Wibble)
+  Woo
+}
+
+
+----- AFTER ACTION
+pub fn go(wibbles) {
+  case wibbles {
+    [Wibble(_int, _b), _c, ..] | [Wobble(a: _, b: _)] | _rest -> todo
+  }
+}
+
+type Wibble {
+  Wibble(Int, Wibble)
+  Wobble(a: Int, b: Wibble)
+  Woo
+}
