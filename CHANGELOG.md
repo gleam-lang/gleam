@@ -126,6 +126,43 @@
   `name`.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The "merge case branches" code action can now merge branches defining
+  different variables:
+
+  ```gleam
+  pub fn is_scatterplot(plot: Plot) -> Bool {
+    case plot {
+      Scatterplot(points:) -> todo
+
+      // If we try and merge all the branches below:
+      Line(points:) -> todo
+      VerticalBars(bars:) -> todo
+      HeatMap(squares:) -> todo
+      HorizontalBand(from:, to:) -> todo
+    }
+  }
+  ```
+
+  The variables that are not shared by all branches will be automatically
+  ignored to produce valid Gleam code. In the example above, this is what the
+  code would look like:
+
+  ```gleam
+  pub fn is_scatterplot(plot: Plot) -> Bool {
+    case plot {
+      Scatterplot(points:) -> todo
+
+      // If we try and merge all the branches below:
+      Line(points: _)
+      | VerticalBars(bars: _)
+      | HeatMap(squares: _)
+      | HorizontalBand(from: _, to: _) -> todo
+    }
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The language server now allows to find references of `echo`. For example,
 
   ```gleam

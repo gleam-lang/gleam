@@ -9926,6 +9926,17 @@ impl<'a> CollapseNestedCase<'a> {
             return vec![];
         };
 
+        // We cannot offer the code action when the matched variable is an alias:
+        // we don't actually have a variable we can replace!
+        //
+        // ```gleam
+        // 1 as wobble -> case wobble { ... }
+        // ```
+        //
+        if let BoundVariableName::PatternAlias { .. } = &matched_variable.name {
+            return vec![];
+        }
+
         // Now comes the tricky part: we need to replace the current pattern
         // that is bringing the variable into scope with many new patterns, one
         // for each of the inner clauses.
@@ -9994,6 +10005,10 @@ impl<'a> CollapseNestedCase<'a> {
                         }
 
                         (BoundVariableName::ShorthandLabel { .. }, _) => unreachable!(),
+
+                        (BoundVariableName::PatternAlias { .. }, _) => {
+                            unreachable!("already checked the matched variable can't be an alias")
+                        }
                     };
 
                     let start_of_pattern =
@@ -10019,6 +10034,11 @@ impl<'a> CollapseNestedCase<'a> {
                         &format!(" {new_content}"),
                     );
                 }
+
+                BoundVariable {
+                    name: BoundVariableName::PatternAlias { .. },
+                    ..
+                } => unreachable!("already checked the matched variable can't be an alias"),
             }
 
             new_pattern
@@ -12109,6 +12129,34 @@ struct MergeableBranches {
     /// ```
     ///
     patterns_to_merge: Vec<SrcSpan>,
+
+    /// This is a vector containing all the variables that we're gonna have to
+    /// comment out when merging the branches.
+    /// Those are the variables that are not shared by all the branches: leaving
+    /// them would result in invalid Gleam!
+    /// For example:
+    ///
+    /// ```gleam
+    /// case wibble {
+    ///   Wibble(a: something, b:, d) -> todo
+    /// //          ^^^^^^^^^  ^^
+    ///   Wobble(c, d) -> todo
+    /// //       ^ these are all variables to comment out
+    ///   d -> todo
+    /// }
+    /// ```
+    ///
+    /// Merging the branches we'd get:
+    ///
+    /// ```gleam
+    /// case wibble {
+    ///   Wibble(a: _something, b: _, d)
+    ///   | Wobble(_c, d)
+    ///   | d -> todo
+    /// }
+    /// ```
+    ///
+    variables_to_comment_out: Vec<BoundVariable>,
 }
 
 impl<'a> MergeCaseBranches<'a> {
@@ -12128,19 +12176,36 @@ impl<'a> MergeCaseBranches<'a> {
     pub fn code_actions(mut self) -> Vec<CodeAction> {
         self.visit_typed_module(&self.module.ast);
 
-        let Some(mergeable_branches) = self.patterns_to_merge else {
+        let Some(MergeableBranches {
+            body_to_keep,
+            final_body,
+            patterns_to_merge,
+            variables_to_comment_out,
+        }) = self.patterns_to_merge
+        else {
             return vec![];
         };
 
-        for (one, next) in mergeable_branches.patterns_to_merge.iter().tuple_windows() {
+        for BoundVariable { name, location, .. } in variables_to_comment_out {
+            match name {
+                BoundVariableName::Regular { .. } => self.edits.insert(location.start, "_".into()),
+                BoundVariableName::ListTail { .. } => self.edits.delete(location),
+                BoundVariableName::ShorthandLabel { .. } => {
+                    self.edits.insert(location.end, " _".into())
+                }
+                BoundVariableName::PatternAlias { alias_location, .. } => {
+                    self.edits.delete(alias_location)
+                }
+            }
+        }
+
+        for (one, next) in patterns_to_merge.iter().tuple_windows() {
             self.edits
                 .replace(SrcSpan::new(one.end, next.start), " | ".into());
         }
 
-        self.edits.replace(
-            mergeable_branches.final_body,
-            code_at(self.module, mergeable_branches.body_to_keep).into(),
-        );
+        self.edits
+            .replace(final_body, code_at(self.module, body_to_keep).into());
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Merge case branches")
@@ -12190,6 +12255,19 @@ impl<'a> MergeCaseBranches<'a> {
         let mut clause_patterns_to_merge = vec![reference_clause.pattern_location()];
         let mut final_body = first_hovered_clause.then.location();
 
+        // We keep track of all the variables that are bound in all clauses,
+        // we start with the ones in the first clause and we'll keep adding as
+        // we go over the other ones.
+        let mut all_bound_variables = first_hovered_clause.bound_variables().collect_vec();
+        // We also want to keep track of those variables that are defined in all
+        // the branches. We start with the ones defined by the first one and
+        // will only keep them if they also appear in the other branches as we
+        // go over those.
+        let mut variables_in_all_branches = all_bound_variables
+            .iter()
+            .map(|variable| (variable.name(), variable.type_.clone()))
+            .collect::<HashMap<_, _>>();
+
         for clause in clauses {
             // As soon as we find a clause that can't be merged with the current
             // reference we know we're done looking for consecutive clauses to
@@ -12197,6 +12275,19 @@ impl<'a> MergeCaseBranches<'a> {
             if !clauses_can_be_merged(reference_clause, clause) {
                 break;
             }
+
+            let mut bound_variables_map = HashMap::new();
+            for variable in clause.bound_variables() {
+                let _ = bound_variables_map.insert(variable.name(), variable.type_.clone());
+                all_bound_variables.push(variable);
+            }
+            // We only keep a variable if it is defined both by the previous
+            // clauses and the current one.
+            variables_in_all_branches.retain(|variable, type_| {
+                bound_variables_map
+                    .get(variable)
+                    .is_some_and(|other_type| type_.same_as(other_type))
+            });
 
             clause_patterns_to_merge.push(clause.pattern_location());
             final_body = clause.then.location();
@@ -12217,6 +12308,10 @@ impl<'a> MergeCaseBranches<'a> {
                 final_body,
                 body_to_keep: reference_clause.then.location(),
                 patterns_to_merge: clause_patterns_to_merge,
+                variables_to_comment_out: all_bound_variables
+                    .into_iter()
+                    .filter(|variable| !variables_in_all_branches.contains_key(&variable.name()))
+                    .collect(),
             })
         } else {
             None
@@ -12228,39 +12323,6 @@ fn clauses_can_be_merged(one: &ast::TypedClause, other: &ast::TypedClause) -> bo
     // Two clauses cannot be merged if any of those has an if guard
     if one.guard.is_some() || other.guard.is_some() {
         return false;
-    }
-
-    // Two clauses can only be merged if they define the same variables,
-    // otherwise joining them would result in invalid code.
-    let variables_one = one
-        .bound_variables()
-        .map(|variable| (variable.name(), variable.type_))
-        .collect::<HashMap<_, _>>();
-
-    let variables_other = other
-        .bound_variables()
-        .map(|variable| (variable.name(), variable.type_))
-        .collect::<HashMap<_, _>>();
-
-    for (name, type_) in variables_one.iter() {
-        if let Some(type_other) = variables_other.get(name)
-            && type_other.same_as(type_)
-        {
-            continue;
-        }
-
-        // There's a variable that is not defined in the second branch but
-        // is defined in the first one, or it's defined in the second branch
-        // but it has an incompatible type.
-        return false;
-    }
-
-    for (name, _) in variables_other.iter() {
-        if !variables_one.contains_key(name) {
-            // There's some variables defined in the second branch that are not
-            // defined in the first one, so they can't be merged!
-            return false;
-        }
     }
 
     // Anything can be merged with a simple todo, or the two bodies must be
