@@ -1,0 +1,23 @@
+---
+source: language-server/src/tests/action.rs
+expression: "pub fn go(n: List(Int)) {\n  case n {\n    [a, b] -> todo\n    [c] -> todo\n    _ -> 10\n  }\n}"
+---
+----- BEFORE ACTION
+pub fn go(n: List(Int)) {
+  case n {
+    [a, b] -> todo
+     ▔▔▔▔▔▔▔▔▔▔▔▔▔
+    [c] -> todo
+▔▔▔▔▔↑         
+    _ -> 10
+  }
+}
+
+
+----- AFTER ACTION
+pub fn go(n: List(Int)) {
+  case n {
+    [_a, _b] | [_c] -> todo
+    _ -> 10
+  }
+}

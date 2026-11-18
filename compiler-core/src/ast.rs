@@ -3375,6 +3375,16 @@ pub enum BoundVariableName {
     },
     /// Any other variable name.
     Regular { name: EcoString },
+    /// A variable brought into scope using `as name`.
+    PatternAlias {
+        name: EcoString,
+        /// This covers the entire name, inclusing the `as` bit:
+        /// ```gleam
+        /// 1 as wobble
+        ///   ^^^^^^^^^ This span here
+        /// ```
+        alias_location: SrcSpan,
+    },
 }
 
 impl BoundVariable {
@@ -3382,7 +3392,8 @@ impl BoundVariable {
         match &self.name {
             BoundVariableName::ShorthandLabel { name }
             | BoundVariableName::ListTail { name, .. }
-            | BoundVariableName::Regular { name } => name.clone(),
+            | BoundVariableName::Regular { name }
+            | BoundVariableName::PatternAlias { name, .. } => name.clone(),
         }
     }
 }
@@ -3655,7 +3666,10 @@ impl TypedPattern {
                 location,
             } => {
                 variables.push(BoundVariable {
-                    name: BoundVariableName::Regular { name: name.clone() },
+                    name: BoundVariableName::PatternAlias {
+                        name: name.clone(),
+                        alias_location: SrcSpan::new(pattern.location().end, location.end),
+                    },
                     location: *location,
                     type_: pattern.type_(),
                 });
