@@ -69,8 +69,26 @@ fn audit_text_format() {
 }
 
 #[test]
+fn audit_text_format_empty() {
+    assert_eq!(
+        Audit { packages: vec![] }.as_output(AuditOutputFormat::Text),
+        ""
+    );
+}
+
+#[test]
 fn audit_json_format() {
     insta::assert_snapshot!(example_audit().as_output(AuditOutputFormat::Json));
+}
+
+#[test]
+fn audit_json_format_empty() {
+    assert_eq!(
+        Audit { packages: vec![] }.as_output(AuditOutputFormat::Json),
+        r#"{
+  "packages": []
+}"#
+    );
 }
 
 #[derive(Default)]

@@ -243,11 +243,15 @@ where
             &self.telemetry,
         ))?;
 
+        // Record information about the downloaded packages to the build directory.
+        LocalPackages::from_manifest(&resolved.manifest).write_to_disc(paths)?;
+
+        // If the package versions have changed then we have to record the new
+        // versions and display related information to the user.
         if resolved.any_changes() {
-            // Record new state of the packages directory
             tracing::debug!("writing_manifest_toml");
+            // Lock the new versions in manifest.toml
             write_manifest_to_disc(paths, &resolved.manifest)?;
-            LocalPackages::from_manifest(&resolved.manifest).write_to_disc(paths)?;
 
             // Display the changes in versions to the user.
             self.telemetry
