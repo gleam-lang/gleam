@@ -6,6 +6,51 @@ use itertools::Itertools;
 
 use crate::ast::Endianness;
 
+/// Remove any ansi escape codes from a string.
+///
+/// This function should be called on any untrusted input
+/// prior to printing to the console.
+///
+pub fn strip_ansi_escape_codes(input: &str) -> StrWithoutAnsiEscapes<'_> {
+    StrWithoutAnsiEscapes(anstream::adapter::strip_str(input))
+}
+
+#[derive(Debug, Clone)]
+pub struct StrWithoutAnsiEscapes<'content>(anstream::adapter::StrippedStr<'content>);
+
+impl<'content> Iterator for StrWithoutAnsiEscapes<'content> {
+    type Item = &'content str;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.next()
+    }
+}
+
+impl<'content> std::fmt::Display for StrWithoutAnsiEscapes<'content> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+#[test]
+fn strip_ansi_escape_codes_to_string() {
+    assert_eq!(
+        strip_ansi_escape_codes("\x1b[32mwibble\x1b[m wobble").to_string(),
+        "wibble wobble"
+    );
+}
+
+#[test]
+fn strip_ansi_escape_codes_to_format() {
+    assert_eq!(
+        format!(
+            "hello: {}",
+            strip_ansi_escape_codes("\x1b[32mwibble\x1b[m wobble"),
+        ),
+        "hello: wibble wobble"
+    );
+}
+
 /// Converts any escape sequences from the given string to their correct
 /// bytewise UTF-8 representation and returns the resulting string.
 pub fn convert_string_escape_chars(str: &EcoString) -> EcoString {
