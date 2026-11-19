@@ -246,12 +246,11 @@ pub fn audit(paths: &ProjectPaths, format: AuditOutputFormat) -> Result<i32> {
     let package_fetcher = HttpPackageFetcher::new(runtime.handle().clone());
     let audit = Audit::audit_manifest(&manifest.packages, &package_fetcher)?;
 
-    if audit.is_empty() {
-        return Ok(0);
-    }
-
     print!("{}", audit.as_output(format));
-    Ok(1)
+
+    let exit_status_code = if audit.is_empty() { 0 } else { 1 };
+
+    Ok(exit_status_code)
 }
 
 #[derive(Debug, Clone, Copy)]

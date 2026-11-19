@@ -142,7 +142,7 @@ impl Audit {
         version: &Version,
         release: &Release<()>,
     ) {
-        if !release.retirement_status.is_some() && release.security_advisories.is_empty() {
+        if release.retirement_status.is_none() && release.security_advisories.is_empty() {
             return;
         }
 
@@ -167,6 +167,7 @@ impl Audit {
     }
 }
 
+/// A package within the audit which has some advisories or is retired.
 #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct AuditPackage {
     pub name: EcoString,
@@ -175,9 +176,13 @@ pub struct AuditPackage {
     pub advisories: Vec<SecurityAdvisory>,
 }
 
+/// A sercurity advisory, a problem!
 #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct SecurityAdvisory {
+    /// The advisory CVE number.
     pub id: String,
+    /// Human readable short description of the issue. Untrusted, comes
+    /// from the author of the advisory via the CNA via Hex.
     pub summary: String,
     pub html_url: String,
     pub cvss_rating: Option<hexpm::AdvisorySeverity>,

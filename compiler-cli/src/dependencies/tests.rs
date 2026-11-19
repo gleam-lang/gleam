@@ -1962,10 +1962,9 @@ struct FakeFetcher {
 
 impl PackageFetcher for FakeFetcher {
     fn get_package(&self, package: &str) -> Result<Rc<hexpm::Package>, Error> {
-        self.packages
-            .get(package)
-            .map(Rc::clone)
-            .ok_or_else(|| panic!("{package} not found"))
+        self.packages.get(package).map(Rc::clone).ok_or_else(|| {
+            panic!("{package} not found, packages should always be present in tests")
+        })
     }
 }
 
