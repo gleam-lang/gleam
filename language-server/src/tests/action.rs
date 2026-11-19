@@ -13576,6 +13576,81 @@ fn merge_case_branch_with_complex_bodies_4() {
 }
 
 #[test]
+fn merge_case_branch_can_merge_clauses_with_different_variables_discarding_them() {
+    assert_code_action!(
+        MERGE_CASE_BRANCHES,
+        r#"pub fn go(n: List(Int)) {
+  case n {
+    [a, b] -> todo
+    [c] -> todo
+    _ -> 10
+  }
+}"#,
+        find_position_of("a, b").select_until(find_position_of("c]"))
+    );
+}
+
+#[test]
+fn merge_case_branch_can_merge_clauses_with_different_variables_discarding_them_2() {
+    assert_code_action!(
+        MERGE_CASE_BRANCHES,
+        r#"pub fn go(wibble) {
+  case wibble {
+    Wibble(int, b) -> todo
+    Wobble(a:, b:) -> todo
+    b -> todo
+  }
+}
+
+type Wibble {
+  Wibble(Int, Wibble)
+  Wobble(a: Int, b: Wibble)
+  Woo
+}
+"#,
+        find_position_of("Wibble").select_until(find_position_of("b -> todo"))
+    );
+}
+
+#[test]
+fn merge_case_branch_can_merge_clauses_with_different_variables_discarding_them_3() {
+    assert_code_action!(
+        MERGE_CASE_BRANCHES,
+        r#"pub fn go(wibbles) {
+  case wibbles {
+    [Wibble(int, b), c, ..rest] -> todo
+    [Wobble(a:, b:)] -> todo
+    rest -> todo
+  }
+}
+
+type Wibble {
+  Wibble(Int, Wibble)
+  Wobble(a: Int, b: Wibble)
+  Woo
+}
+"#,
+        find_position_of("Wibble").select_until(find_position_of("rest -> todo"))
+    );
+}
+
+#[test]
+fn merge_case_branch_can_merge_clauses_with_different_variables_discarding_them_4() {
+    assert_code_action!(
+        MERGE_CASE_BRANCHES,
+        r#"pub fn go(n) {
+  case n {
+    1 as some_alias_that_is_removed -> todo
+    2 -> todo
+    _ -> todo
+  }
+}
+"#,
+        find_position_of("1 as").select_until(find_position_of("_ -> todo"))
+    );
+}
+
+#[test]
 fn merge_case_branch_will_not_merge_branches_with_guards() {
     assert_no_code_actions!(
         MERGE_CASE_BRANCHES,
@@ -13587,21 +13662,6 @@ fn merge_case_branch_will_not_merge_branches_with_guards() {
   }
   }"#,
         find_position_of("1").select_until(find_position_of("2"))
-    );
-}
-
-#[test]
-fn merge_case_branch_will_not_merge_branches_defining_different_variables() {
-    assert_no_code_actions!(
-        MERGE_CASE_BRANCHES,
-        r#"pub fn go(result: Result(Int, Int)) {
-  case result {
-    Ok(value) -> todo
-    Error(error) -> todo
-    _ -> todo
-  }
-  }"#,
-        find_position_of("Ok").select_until(find_position_of("error"))
     );
 }
 
@@ -13668,8 +13728,8 @@ fn merge_case_branch_works_with_existing_alternative_patterns() {
 }
 
 #[test]
-fn merge_case_branch_does_not_merge_branches_with_variables_with_same_name_and_different_types() {
-    assert_no_code_actions!(
+fn merge_case_branch_ignores_variables_with_different_type_when_merging_branches() {
+    assert_code_action!(
         MERGE_CASE_BRANCHES,
         r#"pub fn go(result: Result(Int, String)) {
   case result {
