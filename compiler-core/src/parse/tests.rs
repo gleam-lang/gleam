@@ -827,6 +827,11 @@ fn semicolons() {
 }
 
 #[test]
+fn unexpected_ampersand() {
+    assert_error!("let wobble = 1 & 2");
+}
+
+#[test]
 fn bare_expression() {
     assert_parse!(r#"1"#);
 }
