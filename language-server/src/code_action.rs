@@ -10,10 +10,10 @@ use gleam_core::{
     ast::{
         self, ArgNames, AssignName, AssignmentKind, BitArraySegmentTruncation, BoundVariable,
         BoundVariableName, CallArg, CustomType, FunctionLiteralKind, HasLocation,
-        ImplicitCallArgOrigin, Import, InvalidExpression, PIPE_PRECEDENCE, Pattern,
-        PatternUnusedArguments, PipelineAssignmentKind, Publicity, RecordConstructor,
-        StringPrefixLeftSideAssignment, TodoKind, TypeAstConstructorName, TypedArg,
-        TypedAssignment, TypedClauseGuard, TypedCustomType, TypedDefinitions, TypedExpr,
+        ImplicitCallArgOrigin, Import, InvalidExpression, ModuleLocalTypedDefinition,
+        PIPE_PRECEDENCE, Pattern, PatternUnusedArguments, PipelineAssignmentKind, Publicity,
+        RecordConstructor, StringPrefixLeftSideAssignment, TodoKind, TypeAstConstructorName,
+        TypedArg, TypedAssignment, TypedClauseGuard, TypedCustomType, TypedDefinitions, TypedExpr,
         TypedFunction, TypedModuleConstant, TypedPattern, TypedPipelineAssignment,
         TypedRecordConstructor, TypedStatement, TypedTailPattern, TypedTypeAlias, TypedUse,
         visit::Visit as _,
@@ -1322,17 +1322,20 @@ pub fn code_action_generate_type(
         let maybe_definition =
             definition_containing_position(&module.ast.definitions, location.start);
 
-        let is_public = maybe_definition
-            .as_ref()
-            .map_or(false, |definition| definition.publicity().is_public());
-        let (insert_at, prefix_newline) =
-            maybe_definition.map_or((module.code.len() as u32, ""), |definition| {
-                let span = definition.span();
-                match definition.generate_type_insertion_position() {
-                    GenerateTypeInsertionPosition::Above => (span.start, ""),
-                    GenerateTypeInsertionPosition::Below => (span.end, "\n\n"),
+        let is_public = match maybe_definition {
+            Some(definition) => definition.publicity().is_public(),
+            None => false,
+        };
+        let (insert_at, prefix_newline) = match maybe_definition {
+            Some(definition) => {
+                let span = definition.full_location();
+                match generate_type_insertion_position(definition) {
+                    RelativePosition::Above => (span.start, ""),
+                    RelativePosition::Below => (span.end, "\n\n"),
                 }
-            });
+            }
+            None => (module.code.len() as u32, ""),
+        };
 
         let insert_range = src_span_to_lsp_range(
             SrcSpan {
@@ -1364,95 +1367,24 @@ pub fn code_action_generate_type(
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-/// Whether the "Generate type" code action should insert the missing type above
-/// or below the definition.
-enum GenerateTypeInsertionPosition {
+/// Whether the a defintion exists above or below another definition in the same file.
+enum RelativePosition {
     Above,
     Below,
 }
 
-/// Module-local definitions are defined within the current module, and can have
-/// code actions performed to alter them within this file.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum ModuleLocalTypedDefinition<'a> {
-    Constant(&'a TypedModuleConstant),
-    CustomType(&'a TypedCustomType),
-    TypeAlias(&'a TypedTypeAlias),
-    Function(&'a TypedFunction),
-}
-
-impl<'a> ModuleLocalTypedDefinition<'a> {
-    const fn publicity(&self) -> Publicity {
-        match self {
-            ModuleLocalTypedDefinition::Constant(constant) => constant.publicity,
-            ModuleLocalTypedDefinition::CustomType(custom_type) => custom_type.publicity,
-            ModuleLocalTypedDefinition::TypeAlias(type_alias) => type_alias.publicity,
-            ModuleLocalTypedDefinition::Function(function) => function.publicity,
+/// Returns whether the "Generate type" code action should insert the missing type above
+/// or below the definition.
+const fn generate_type_insertion_position(
+    definition: ModuleLocalTypedDefinition<'_>,
+) -> RelativePosition {
+    match definition {
+        ModuleLocalTypedDefinition::Function(_) | ModuleLocalTypedDefinition::Constant(_) => {
+            RelativePosition::Above
         }
-    }
-
-    fn span(&self) -> SrcSpan {
-        match self {
-            ModuleLocalTypedDefinition::Constant(module_constant) => module_constant.location,
-            ModuleLocalTypedDefinition::CustomType(custom_type) => custom_type.full_location(),
-            ModuleLocalTypedDefinition::TypeAlias(type_alias) => type_alias.location,
-            ModuleLocalTypedDefinition::Function(function) => {
-                // If the function has any doc comments we want the generated type to
-                // end up above the doc comment too! So we consider the documentation's
-                // start as the start of the function definition.
-                let full_location_with_docs = match function.documentation {
-                    None => function.full_location(),
-                    Some((documentation_start, _)) => {
-                        // The `documentation_start` we track here is the start of the
-                        // written content right after the `///`, so we also need to
-                        // subtract 3 here to make sure we start before the `///`.
-                        SrcSpan::new(documentation_start - 3, function.full_location().end)
-                    }
-                };
-                full_location_with_docs
-            }
+        ModuleLocalTypedDefinition::CustomType(_) | ModuleLocalTypedDefinition::TypeAlias(_) => {
+            RelativePosition::Below
         }
-    }
-
-    /// Returns whether the "Generate type" code action should insert the missing type above
-    /// or below the definition.
-    const fn generate_type_insertion_position(&self) -> GenerateTypeInsertionPosition {
-        match self {
-            ModuleLocalTypedDefinition::Function(_) | ModuleLocalTypedDefinition::Constant(_) => {
-                GenerateTypeInsertionPosition::Above
-            }
-            ModuleLocalTypedDefinition::CustomType(_)
-            | ModuleLocalTypedDefinition::TypeAlias(_) => GenerateTypeInsertionPosition::Below,
-        }
-    }
-
-    /// Creates an iterator of module-local definitions out of a reference to a set of typed
-    /// definitions. This includes everything except imports.
-    fn from_definitions(definitions: &'a TypedDefinitions) -> impl Iterator<Item = Self> {
-        let constants = definitions
-            .constants
-            .iter()
-            .map(ModuleLocalTypedDefinition::Constant);
-
-        let functions = definitions
-            .functions
-            .iter()
-            .map(ModuleLocalTypedDefinition::Function);
-
-        let custom_types = definitions
-            .custom_types
-            .iter()
-            .map(ModuleLocalTypedDefinition::CustomType);
-
-        let type_aliases = definitions
-            .type_aliases
-            .iter()
-            .map(ModuleLocalTypedDefinition::TypeAlias);
-
-        constants
-            .chain(functions)
-            .chain(custom_types)
-            .chain(type_aliases)
     }
 }
 
@@ -1461,11 +1393,10 @@ fn definition_containing_position<'a>(
     definitions: &'a TypedDefinitions,
     position: u32,
 ) -> Option<ModuleLocalTypedDefinition<'a>> {
-    let local_definitions = ModuleLocalTypedDefinition::from_definitions(definitions);
-
-    local_definitions
+    definitions
+        .iter_local()
         .filter(|definition| {
-            let span = definition.span();
+            let span = definition.full_location();
             span.start <= position && position <= span.end
         })
         .next()
