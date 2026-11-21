@@ -124,6 +124,82 @@ pub struct TypedDefinitions {
     pub functions: Vec<TypedFunction>,
 }
 
+impl TypedDefinitions {
+    /// Returns an iterator of module-local definitions. This is all typed defintions excluding
+    /// imports. This function is useful for performing code actions on local definitions within
+    /// a module. For example, it is used for automatically generating a missing type definition.
+    pub fn iter_local<'a>(&'a self) -> impl Iterator<Item = ModuleLocalTypedDefinition<'a>> {
+        let constants = self
+            .constants
+            .iter()
+            .map(ModuleLocalTypedDefinition::Constant);
+
+        let functions = self
+            .functions
+            .iter()
+            .map(ModuleLocalTypedDefinition::Function);
+
+        let custom_types = self
+            .custom_types
+            .iter()
+            .map(ModuleLocalTypedDefinition::CustomType);
+
+        let type_aliases = self
+            .type_aliases
+            .iter()
+            .map(ModuleLocalTypedDefinition::TypeAlias);
+
+        constants
+            .chain(functions)
+            .chain(custom_types)
+            .chain(type_aliases)
+    }
+}
+
+/// Module-local definitions are defined within the current module, and can have
+/// code actions performed to alter them within this file.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ModuleLocalTypedDefinition<'a> {
+    Constant(&'a TypedModuleConstant),
+    CustomType(&'a TypedCustomType),
+    TypeAlias(&'a TypedTypeAlias),
+    Function(&'a TypedFunction),
+}
+
+impl<'a> ModuleLocalTypedDefinition<'a> {
+    pub const fn publicity(&self) -> Publicity {
+        match self {
+            ModuleLocalTypedDefinition::Constant(constant) => constant.publicity,
+            ModuleLocalTypedDefinition::CustomType(custom_type) => custom_type.publicity,
+            ModuleLocalTypedDefinition::TypeAlias(type_alias) => type_alias.publicity,
+            ModuleLocalTypedDefinition::Function(function) => function.publicity,
+        }
+    }
+
+    pub fn full_location(&self) -> SrcSpan {
+        match self {
+            ModuleLocalTypedDefinition::Constant(module_constant) => module_constant.location,
+            ModuleLocalTypedDefinition::CustomType(custom_type) => custom_type.full_location(),
+            ModuleLocalTypedDefinition::TypeAlias(type_alias) => type_alias.location,
+            ModuleLocalTypedDefinition::Function(function) => {
+                // If the function has any doc comments we want the generated type to
+                // end up above the doc comment too! So we consider the documentation's
+                // start as the start of the function definition.
+                let full_location_with_docs = match function.documentation {
+                    None => function.full_location(),
+                    Some((documentation_start, _)) => {
+                        // The `documentation_start` we track here is the start of the
+                        // written content right after the `///`, so we also need to
+                        // subtract 3 here to make sure we start before the `///`.
+                        SrcSpan::new(documentation_start - 3, function.full_location().end)
+                    }
+                };
+                full_location_with_docs
+            }
+        }
+    }
+}
+
 /// The `@target(erlang)` and `@target(javascript)` attributes can be used to
 /// mark a definition as only being for a specific target.
 ///
