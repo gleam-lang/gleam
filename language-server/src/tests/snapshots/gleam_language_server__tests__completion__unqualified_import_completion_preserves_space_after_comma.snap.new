@@ -1,0 +1,20 @@
+---
+source: language-server/src/tests/completion.rs
+assertion_line: 1596
+expression: "\nimport dep.{wibble, wo}\n\npub fn main() {\n  0\n}"
+---
+
+import dep.{wibble, wo|}
+
+pub fn main() {
+  0
+}
+
+
+----- After applying completion -----
+
+import dep.{wibble, wobble}
+
+pub fn main() {
+  0
+}
