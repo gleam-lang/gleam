@@ -677,7 +677,7 @@ impl Command {
                 export::package_information(&paths, output).map(|()| 0)
             }
             Self::Export(ExportTarget::SystemInformation { output }) => {
-                export::system_information(output)
+                export::system_information(output).map(|()| 0)
             }
         }
     }
