@@ -3,7 +3,7 @@
 
 use gleam_core::{
     analyse::TargetSupport,
-    build::{Codegen, Compile, ErlangOutput, Mode, Options, Target},
+    build::{Codegen, Compile, ErlangOutput, Mode, Options, Runtime, Target},
     error::{Error, ShellCommandFailureReason},
     paths::ProjectPaths,
 };
@@ -50,4 +50,38 @@ pub fn command(paths: &ProjectPaths) -> Result<(), Error> {
         reason: ShellCommandFailureReason::IoError(error.kind()),
     })?;
     Ok(())
+}
+
+pub fn version(target: Target, runtime: Option<Runtime>) -> Result<String, Error> {
+    let program = match target {
+        Target::Erlang => "erl",
+        Target::JavaScript => match runtime.unwrap() {
+            Runtime::Bun => "bun",
+            Runtime::Deno => "deno",
+            Runtime::NodeJs => "node",
+        },
+    };
+
+    // Prepare the baseline command to be used
+    let mut command = Command::new(program);
+
+    // Modify the arguments based on the program type
+    let _ = match target {
+        Target::Erlang =>  command.arg("-noshell").arg("-eval").arg("{ok, V} = file:read_file(filename:join([code:root_dir(), \"releases\", erlang:system_info(otp_release), \"OTP_VERSION\"])), io:frwrite(V), halt()."),
+        Target::JavaScript => match runtime.unwrap() {
+            Runtime::Bun =>  command.arg("--version"),
+            Runtime::Deno => command.arg("__version"),
+            Runtime::NodeJs => command.arg("eval").arg("console.log(Deno.version.deno)"),
+        },
+    };
+
+    // Execute the command and get the output
+    tracing::info!("Running OS process {:?}", command);
+    let result = command.output().map_err(|error| Error::ShellCommand {
+        program: program.to_string(),
+        reason: ShellCommandFailureReason::IoError(error.kind()),
+    });
+
+    // Finally remap the result into a suitable value
+    result.map(|output| String::from_utf8_lossy(&output.stdout).to_string())
 }

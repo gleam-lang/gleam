@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2022 The Gleam contributors
 
-use crate::fs::{self, ZipArchive};
+use crate::{
+    fs::{self, ZipArchive},
+    shell,
+};
 use camino::Utf8PathBuf;
 use gleam_core::{
     Result,
     analyse::TargetSupport,
-    build::{Codegen, Compile, ErlangOutput, Mode, Options, Target},
+    build::{Codegen, Compile, ErlangOutput, Mode, Options, Runtime, Target},
     docs, io,
     paths::ProjectPaths,
     type_::ModuleFunction,
@@ -293,6 +296,12 @@ pub fn package_information(paths: &ProjectPaths, out: Option<Utf8PathBuf>) -> Re
     write_scoped_path_or_stdout(paths, out, information)
 }
 
-pub fn system_information() -> Result<()> {
+pub fn system_information(_: Option<Utf8PathBuf>) -> Result<()> {
+    // read all the various runtime versions
+    let erl = shell::version(Target::Erlang, None);
+    let bun = shell::version(Target::JavaScript, Some(Runtime::Bun));
+    let deno = shell::version(Target::JavaScript, Some(Runtime::Deno));
+    let node = shell::version(Target::JavaScript, Some(Runtime::NodeJs));
+
     Ok(())
 }

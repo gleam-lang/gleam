@@ -676,8 +676,8 @@ impl Command {
                 let paths = find_project_paths(directory)?;
                 export::package_information(&paths, output).map(|()| 0)
             }
-            Self::Export(ExportTarget::SystemInformation) => {
-                export::system_information()
+            Self::Export(ExportTarget::SystemInformation { output }) => {
+                export::system_information(output)
             }
         }
     }
@@ -743,7 +743,13 @@ pub enum ExportTarget {
         output: Option<Utf8PathBuf>,
     },
     /// System information on available/installed tooling
-    SystemInformation,
+    SystemInformation {
+        /// (optional) The path to write the JSON file to.
+        ///
+        /// If ommited, the command will print to stdout.
+        #[arg(verbatim_doc_comment, long = "out")]
+        output: Option<Utf8PathBuf>,
+    },
 }
 
 #[derive(Args, Debug, Clone)]
