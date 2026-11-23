@@ -7,7 +7,7 @@ use crate::{
 };
 use camino::Utf8PathBuf;
 use gleam_core::{
-    Result,
+    Error, Result,
     analyse::TargetSupport,
     build::{Codegen, Compile, ErlangOutput, Mode, Options, Runtime, Target},
     docs, io,
@@ -296,12 +296,31 @@ pub fn package_information(paths: &ProjectPaths, out: Option<Utf8PathBuf>) -> Re
     write_scoped_path_or_stdout(paths, out, information)
 }
 
-pub fn system_information(_: Option<Utf8PathBuf>) -> Result<()> {
-    // read all the various runtime versions
+fn version_information(result: Result<String, Error>) -> Option<docs::VersionInformation> {
+    if result.is_err() {
+        return None;
+    }
+
+    Some(docs::VersionInformation {
+        version: result.unwrap(),
+    })
+}
+
+pub fn system_information(out: Option<Utf8PathBuf>) -> Result<()> {
+    // Read all the various runtime versions
     let erl = shell::version(Target::Erlang, None);
     let bun = shell::version(Target::JavaScript, Some(Runtime::Bun));
     let deno = shell::version(Target::JavaScript, Some(Runtime::Deno));
     let node = shell::version(Target::JavaScript, Some(Runtime::NodeJs));
 
-    Ok(())
+    // Convert these values to a suitable JSON structure
+    let information = docs::system_information_as_json(docs::SystemInformation {
+        erl: version_information(erl),
+        bun: version_information(bun),
+        node: version_information(node),
+        deno: version_information(deno),
+    });
+
+    // Finally output the resulting system-information
+    write_path_or_stdout(out, information.as_str())
 }

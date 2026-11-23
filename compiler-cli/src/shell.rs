@@ -69,9 +69,9 @@ pub fn version(target: Target, runtime: Option<Runtime>) -> Result<String, Error
     let _ = match target {
         Target::Erlang =>  command.arg("-noshell").arg("-eval").arg("{ok, V} = file:read_file(filename:join([code:root_dir(), \"releases\", erlang:system_info(otp_release), \"OTP_VERSION\"])), io:frwrite(V), halt()."),
         Target::JavaScript => match runtime.unwrap() {
-            Runtime::Bun =>  command.arg("--version"),
-            Runtime::Deno => command.arg("__version"),
-            Runtime::NodeJs => command.arg("eval").arg("console.log(Deno.version.deno)"),
+            Runtime::Bun =>  command.arg("-p").arg("Bun.version"),
+            Runtime::NodeJs => command.arg("-p").arg("process.versions.node"),
+            Runtime::Deno => command.arg("eval").arg("-p").arg("Deno.version.deno"),
         },
     };
 
@@ -83,5 +83,5 @@ pub fn version(target: Target, runtime: Option<Runtime>) -> Result<String, Error
     });
 
     // Finally remap the result into a suitable value
-    result.map(|output| String::from_utf8_lossy(&output.stdout).to_string())
+    result.map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string())
 }

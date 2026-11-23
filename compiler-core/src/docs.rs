@@ -41,6 +41,19 @@ pub struct PackageInformation {
     package_config: PackageConfig,
 }
 
+#[derive(PartialEq, Debug, Serialize, Deserialize)]
+pub struct VersionInformation {
+    pub version: String,
+}
+
+#[derive(PartialEq, Debug, Serialize, Deserialize)]
+pub struct SystemInformation {
+    pub erl: Option<VersionInformation>,
+    pub bun: Option<VersionInformation>,
+    pub node: Option<VersionInformation>,
+    pub deno: Option<VersionInformation>,
+}
+
 /// Like `ManifestPackage`, but lighter and cheaper to clone as it is all that
 /// we need for printing documentation.
 #[derive(Debug, Clone)]
@@ -532,7 +545,7 @@ pub fn package_interface(
     cached_modules: &imbl::HashMap<EcoString, type_::ModuleInterface>,
 ) -> String {
     serde_json::to_string_pretty(&PackageInterface::from_package(package, cached_modules))
-        .expect("JSON module interface serialisation")
+        .expect("JSON module package interface serialisation")
 }
 
 pub fn generate_json_package_information(path: Utf8PathBuf, config: PackageConfig) -> OutputFile {
@@ -546,7 +559,11 @@ pub fn package_information_as_json(config: PackageConfig) -> String {
     let info = PackageInformation {
         package_config: config,
     };
-    serde_json::to_string_pretty(&info).expect("JSON module information serialisation")
+    serde_json::to_string_pretty(&info).expect("JSON module package information serialisation")
+}
+
+pub fn system_information_as_json(system: SystemInformation) -> String {
+    serde_json::to_string_pretty(&system).expect("JSON module system information serialisation")
 }
 
 fn page_unnest(path: &str) -> String {
