@@ -1605,6 +1605,7 @@ dependencies = [
  "radix_trie",
  "rand 0.10.4",
  "regex",
+ "reqwest",
  "serde",
  "serde_json",
  "sourcemap",

@@ -557,10 +557,18 @@ pub enum ShellCommandFailureReason {
 }
 
 impl Error {
-    pub fn http<E>(error: E) -> Error
-    where
-        E: std::error::Error,
-    {
+    /// An Http error that happened because of a `reqwest::Error` error.
+    pub fn http_reqwest_error(error: reqwest::Error) -> Error {
+        Self::Http(error.to_string())
+    }
+
+    /// A generic Http error that happened because of a `http::Error` error.
+    pub fn http_error(error: http::Error) -> Error {
+        Self::Http(error.to_string())
+    }
+
+    /// A generic Http error that happened because of a `core::Error` error.
+    pub fn http_core_error(error: Error) -> Error {
         Self::Http(error.to_string())
     }
 

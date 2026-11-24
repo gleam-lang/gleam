@@ -79,6 +79,7 @@ toml.workspace = true
 tracing.workspace = true
 vec1.workspace = true
 unicode-segmentation.workspace = true
+reqwest.workspace = true
 
 [dev-dependencies]
 pretty_assertions.workspace = true

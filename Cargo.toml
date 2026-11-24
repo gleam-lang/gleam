@@ -94,3 +94,5 @@ xxhash-rust = { version = "0", features = ["xxh3"] }
 src-span = { path = "./src-span" }
 # Creation of temporary directories
 tempfile = "3"
+# HTTP client
+reqwest = { version = "^0.13", default-features = false, features = ["rustls"] }
