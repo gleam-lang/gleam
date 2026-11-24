@@ -41,8 +41,11 @@ impl gleam_core::io::HttpClient for HttpClient {
         let request = request
             .try_into()
             .expect("Unable to convert HTTP request for use by reqwest library");
-        let client = init_client().map_err(Error::http)?;
-        let mut response = client.execute(request).await.map_err(Error::http)?;
+        let client = init_client().map_err(Error::http_core_error)?;
+        let mut response = client
+            .execute(request)
+            .await
+            .map_err(Error::http_reqwest_error)?;
         let mut builder = Response::builder()
             .status(response.status())
             .version(response.version());
@@ -50,8 +53,14 @@ impl gleam_core::io::HttpClient for HttpClient {
             std::mem::swap(headers, response.headers_mut());
         }
         builder
-            .body(response.bytes().await.map_err(Error::http)?.to_vec())
-            .map_err(Error::http)
+            .body(
+                response
+                    .bytes()
+                    .await
+                    .map_err(Error::http_reqwest_error)?
+                    .to_vec(),
+            )
+            .map_err(Error::http_error)
     }
 }
 
@@ -86,10 +95,10 @@ fn build_client() -> Result<Client, Error> {
         Client::builder()
             .tls_certs_only(certificates)
             .build()
-            .map_err(Error::http)
+            .map_err(Error::http_reqwest_error)
     } else {
         let Ok(certificate_path) = std::env::var("GLEAM_CACERTS_PATH") else {
-            return Client::builder().build().map_err(Error::http);
+            return Client::builder().build().map_err(Error::http_reqwest_error);
         };
 
         tracing::trace!("Using GLEAM_CACERTS_PATH environment variable");
@@ -97,7 +106,7 @@ fn build_client() -> Result<Client, Error> {
         Client::builder()
             .add_root_certificate(certificate)
             .build()
-            .map_err(Error::http)
+            .map_err(Error::http_reqwest_error)
     }
 }
 

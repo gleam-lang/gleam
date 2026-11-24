@@ -24,8 +24,6 @@ tokio = { version = "1", features = ["rt", "rt-multi-thread"] }
 # Further file system functions (i.e. copy directory)
 fs_extra = "1"
 tracing-subscriber = { version = "0.3.23", features = ["fmt", "env-filter"] }
-# HTTP client
-reqwest = { version = "^0.13", default-features = false, features = ["rustls"] }
 # System trust store loading
 rustls-native-certs = "0.8"
 # Checksums
@@ -69,6 +67,7 @@ termcolor.workspace = true
 toml.workspace = true
 tracing.workspace = true
 xxhash-rust.workspace = true
+reqwest.workspace = true
 
 [dev-dependencies]
 pretty_assertions.workspace = true

@@ -331,7 +331,9 @@ fn check_repo_url(config: &PackageConfig, i_am_sure: bool) -> Result<bool, Error
     let url = repo.url();
 
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
-    let response = runtime.block_on(reqwest::get(&url)).map_err(Error::http)?;
+    let response = runtime
+        .block_on(reqwest::get(&url))
+        .map_err(Error::http_reqwest_error)?;
 
     if response.status().is_success() {
         return Ok(true);
