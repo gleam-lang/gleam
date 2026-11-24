@@ -4,8 +4,6 @@
 use std::fmt;
 use std::str::FromStr;
 
-use crate::Error;
-use crate::error::Result;
 use crate::io::make_relative;
 use camino::{Utf8Path, Utf8PathBuf};
 use ecow::EcoString;
@@ -35,14 +33,29 @@ pub enum Requirement {
     },
 }
 
+/// An error that occurs when a requirement cannot be parsed because one of the
+/// versions in it has an invalid format.
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub struct InvalidVersionFormat {
+    /// The requirement string that couldn't be parsed.
+    pub input: String,
+    /// A string describing why the requirement couldn't be parsed
+    pub error: String,
+}
+
+impl InvalidVersionFormat {
+    pub fn to_short_string(&self) -> String {
+        let InvalidVersionFormat { input, error } = self;
+        format!("{input} is not a valid version. {error}")
+    }
+}
+
 impl Requirement {
-    pub fn hex(range: &str) -> Result<Requirement> {
+    pub fn hex(range: &str) -> Result<Requirement, InvalidVersionFormat> {
         Ok(Requirement::Hex {
-            version: Range::new(range.to_string()).map_err(|error| {
-                Error::InvalidVersionFormat {
-                    input: range.to_string(),
-                    error: error.to_string(),
-                }
+            version: Range::new(range.to_string()).map_err(|error| InvalidVersionFormat {
+                input: range.to_string(),
+                error: error.to_string(),
             })?,
         })
     }
@@ -134,7 +147,7 @@ where
 pub struct Void;
 
 impl FromStr for Requirement {
-    type Err = Error;
+    type Err = InvalidVersionFormat;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Requirement::hex(s)
@@ -156,7 +169,7 @@ impl<'de> Visitor<'de> for RequirementVisitor {
     {
         match value.parse::<Requirement>() {
             Ok(value) => Ok(value),
-            Err(error) => Err(de::Error::custom(error)),
+            Err(error) => Err(de::Error::custom(error.to_short_string())),
         }
     }
 
