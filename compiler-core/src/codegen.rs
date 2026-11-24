@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2020 The Gleam contributors
 
+#[cfg(test)]
+mod tests;
+
 use crate::{
     Result,
     build::{
@@ -144,8 +147,6 @@ impl<'a> ErlangApp<'a> {
             .map(escape_atom_string)
             .join(",\n               ");
 
-        // TODO: When precompiling for production (i.e. as a precompiled hex
-        // package) we will need to exclude the dev deps.
         let applications = config
             .dependencies
             .keys()
@@ -155,7 +156,6 @@ impl<'a> ErlangApp<'a> {
                     .keys()
                     .take_while(|_| self.config.include_dev_deps),
             )
-            // TODO: test this!
             .map(|name| self.config.package_name_overrides.get(name).unwrap_or(name))
             .chain(config.erlang.extra_applications.iter())
             .sorted()
@@ -171,7 +171,7 @@ impl<'a> ErlangApp<'a> {
 ]}}.
 "#,
             applications = applications,
-            description = config.description,
+            description = escape_erlang_string_content(&config.description),
             modules = modules,
             package = config.name,
             start_module = start_module,
@@ -180,6 +180,10 @@ impl<'a> ErlangApp<'a> {
 
         writer.write(&path, &text)
     }
+}
+
+fn escape_erlang_string_content(content: &str) -> String {
+    content.replace('\\', "\\\\").replace('"', "\\\"")
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -312,41 +316,5 @@ impl<'a> JavaScript<'a> {
             writer.write(&source_map_path, &content)?;
         }
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::io::{FileSystemReader, memory::InMemoryFileSystem};
-    use std::collections::HashMap;
-
-    #[test]
-    fn app_file_includes_cached_modules() {
-        // A warm rebuild recompiles nothing, so every module comes from the
-        // `ebin` scan rather than being freshly compiled; they must still be
-        // listed in the .app (https://github.com/gleam-lang/gleam/issues/5834).
-        let fs = InMemoryFileSystem::new();
-        let mut config = PackageConfig::default();
-        config.name = "my_app".into();
-        let codegen_config = ErlangAppCodegenConfiguration {
-            include_dev_deps: false,
-            package_name_overrides: HashMap::new(),
-        };
-
-        // Module names here are already in Erlang atom form (`@`, not `/`),
-        // matching what a real `ebin` scan of `.beam` filenames would yield.
-        ErlangApp::new(Utf8Path::new("/ebin"), &codegen_config)
-            .render(
-                fs.clone(),
-                &config,
-                vec!["my_app@one".into(), "my_app@two".into()],
-            )
-            .expect("render .app");
-
-        let app = fs
-            .read(Utf8Path::new("/ebin/my_app.app"))
-            .expect("read .app");
-        insta::assert_snapshot!(app);
     }
 }

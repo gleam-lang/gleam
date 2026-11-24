@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/codegen.rs
+source: compiler-core/src/codegen/tests.rs
 expression: app
 ---
 {application, my_app, [

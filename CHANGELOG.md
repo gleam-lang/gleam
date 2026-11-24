@@ -386,6 +386,10 @@
 - Fixed a typo in a compiler error message for missing type arguments.
   ([Tomas Vemola](https://github.com/vemolista))
 
+- Fixed a bug where the description field in `.app` files was not escaped and
+  so could produce invalid configuration.
+  ([Louis Pilfold](https://github.com/lpil))
+
 - Fixed a bug where calling a value that is not a function with a labelled
   argument would produce a noisy error about the label, in addition to the
   type error.
