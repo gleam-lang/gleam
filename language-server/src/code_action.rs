@@ -12193,8 +12193,8 @@ impl<'a> MergeCaseBranches<'a> {
                 BoundVariableName::ShorthandLabel { .. } => {
                     self.edits.insert(location.end, " _".into())
                 }
-                BoundVariableName::PatternAlias { alias_location, .. } => {
-                    self.edits.delete(alias_location)
+                BoundVariableName::PatternAlias { pattern_end, .. } => {
+                    self.edits.delete(SrcSpan::new(pattern_end, location.end))
                 }
             }
         }
