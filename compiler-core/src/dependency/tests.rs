@@ -511,7 +511,7 @@ fn resolution_not_found_dep() {
             "An error occurred while choosing the version of unknown: \
 the package unknown was not found in the package repository"
         ),
-        _ => panic!("wrong error: {err}"),
+        _ => panic!("wrong error: {err:?}"),
     }
 }
 
@@ -550,7 +550,7 @@ fn resolution_locked_version_doesnt_satisfy_requirements() {
             "gleam_stdlib is specified with the requirement `~> 0.1.0`, \
 but it is locked to 0.2.0, which is incompatible."
         ),
-        _ => panic!("wrong error: {err}"),
+        _ => panic!("wrong error: {err:?}"),
     }
 }
 
