@@ -3378,12 +3378,13 @@ pub enum BoundVariableName {
     /// A variable brought into scope using `as name`.
     PatternAlias {
         name: EcoString,
-        /// This covers the entire name, inclusing the `as` bit:
+        /// This points to the end of the pattern on the left hand side of the
+        /// alias:
         /// ```gleam
-        /// 1 as wobble
-        ///   ^^^^^^^^^ This span here
+        /// [1, 2] as wobble
+        ///      ^ This position here
         /// ```
-        alias_location: SrcSpan,
+        pattern_end: u32,
     },
 }
 
@@ -3668,7 +3669,7 @@ impl TypedPattern {
                 variables.push(BoundVariable {
                     name: BoundVariableName::PatternAlias {
                         name: name.clone(),
-                        alias_location: SrcSpan::new(pattern.location().end, location.end),
+                        pattern_end: pattern.location().end,
                     },
                     location: *location,
                     type_: pattern.type_(),
