@@ -1,11 +1,11 @@
 ---
-source: compiler-core/src/codegen.rs
+source: compiler-core/src/codegen/tests.rs
 expression: app
 ---
 {application, my_app, [
     {vsn, "0.1.0"},
     {applications, []},
-    {description, ""},
+    {description, "This is a quote \" and a slash \\"},
     {modules, [my_app@one,
                my_app@two]},
     {registered, []}
