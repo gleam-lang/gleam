@@ -909,10 +909,10 @@ pub fn git_init(path: &Utf8Path) -> Result<(), Error> {
     };
     match ProjectIO::new().exec(command) {
         Ok(_) => Ok(()),
-        Err(err) => match err {
+        Err(error) => match error {
             Error::ShellProgramNotFound { .. } => Ok(()),
             _ => Err(Error::GitInitialization {
-                error: err.to_string(),
+                error: Box::new(error),
             }),
         },
     }

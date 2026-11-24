@@ -398,6 +398,20 @@ pub type ResolutionError<'a, T> = pubgrub::PubGrubError<DependencyProvider<'a, T
 #[derive(Debug, Clone)]
 pub struct ResolutionFailure(pub(crate) DerivationTree<PackageName, PubgrubRange, String>);
 
+#[derive(Debug)]
+/// This is a wrapper around our core Error type to add an `Error`
+/// implementation that sadly is required by pubgrub.
+pub struct DependencyProviderError(pub Error);
+
+/// We use the default implementations and only implement the Display instance
+/// to turn errors into a brief description.
+impl std::error::Error for DependencyProviderError {}
+impl fmt::Display for DependencyProviderError {
+    fn fmt(&self, _f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        unreachable!("A DependencyProviderError should never be displayed")
+    }
+}
+
 impl<T> pubgrub::DependencyProvider for DependencyProvider<'_, T>
 where
     T: PackageFetcher,
@@ -407,7 +421,7 @@ where
     type VS = PubgrubRange;
     type Priority = Reverse<usize>;
     type M = String;
-    type Err = Error;
+    type Err = DependencyProviderError;
 
     fn get_dependencies(
         &self,
@@ -418,7 +432,8 @@ where
             return Ok(Dependencies::Available(Map::default()));
         };
 
-        self.ensure_package_fetched(package)?;
+        self.ensure_package_fetched(package)
+            .map_err(DependencyProviderError)?;
         let packages = self.packages.borrow();
         let release = match packages
             .get(package.as_str())
@@ -492,7 +507,8 @@ where
             return Ok(Some(Presence::Absent));
         }
 
-        self.ensure_package_fetched(package)?;
+        self.ensure_package_fetched(package)
+            .map_err(DependencyProviderError)?;
 
         let exact_package = self.exact_only.get(package);
         let potential_versions = self
