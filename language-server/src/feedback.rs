@@ -205,21 +205,14 @@ impl FeedbackBookKeeper {
         feedback
     }
 
-    pub fn clear_warning_and_error_diagnostics(&self) -> Feedback {
+    pub fn clear_all_diagnostics(&self) -> Feedback {
         let mut feedback = Feedback::none();
         for file in self
             .files_with_warnings
             .iter()
             .chain(self.files_with_errors.iter())
+            .chain(self.skipped_files_diagnostics.keys().into_iter())
         {
-            feedback.unset_existing_diagnostics(file.clone());
-        }
-        feedback
-    }
-
-    pub fn clear_skipped_file_diagnostics(&self) -> Feedback {
-        let mut feedback = Feedback::none();
-        for file in self.skipped_files_diagnostics.keys() {
             feedback.unset_existing_diagnostics(file.clone());
         }
         feedback
