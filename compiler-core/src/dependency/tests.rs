@@ -506,8 +506,8 @@ fn resolution_not_found_dep() {
     )
     .unwrap_err();
     match err {
-        Error::DependencyResolutionError(error) => assert_eq!(
-            error,
+        Error::DependencyResolutionError { reason } => assert_eq!(
+            reason.describe(),
             "An error occurred while choosing the version of unknown: \
 the package unknown was not found in the package repository"
         ),
