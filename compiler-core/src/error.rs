@@ -10,6 +10,7 @@ use crate::derivation_tree::DerivationTreePrinter;
 use crate::diagnostic::{Diagnostic, ExtraLabel, Label, Location};
 
 use crate::parse::error::ParseErrorDetails;
+use crate::requirement;
 use crate::strings::{to_snake_case, to_upper_camel_case};
 use crate::type_::collapse_links;
 use crate::type_::error::{
@@ -270,8 +271,10 @@ pub enum Error {
     #[error("{module}'s main function does not support the current target")]
     MainFunctionDoesNotSupportTarget { module: EcoString, target: Target },
 
-    #[error("{input} is not a valid version. {error}")]
-    InvalidVersionFormat { input: String, error: String },
+    #[error("{}", reason.to_short_string())]
+    InvalidVersionFormat {
+        reason: requirement::InvalidVersionFormat,
+    },
 
     #[error("incompatible locked version. {error}")]
     IncompatibleLockedVersion { error: String },
@@ -2330,7 +2333,9 @@ The error from the HTTP client was:
                 }]
             }
 
-            Error::InvalidVersionFormat { input, error } => {
+            Error::InvalidVersionFormat {
+                reason: requirement::InvalidVersionFormat { input, error },
+            } => {
                 let text = format!(
                     "I was unable to parse the version \"{input}\".
 The error from the parser was:
