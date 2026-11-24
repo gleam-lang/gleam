@@ -21,7 +21,10 @@ use gleam_core::{
     build::{Mode, SourceFingerprint, Target, Telemetry},
     config::PackageConfig,
     dependency::{self},
-    error::{FileIoAction, FileIoCause, FileKind, ShellCommandFailureReason, StandardIoAction},
+    error::{
+        DependencyResolutionFailureReason, FileIoAction, FileIoCause, FileKind,
+        ShellCommandFailureReason, StandardIoAction,
+    },
     hex::{self, HEXPM_PUBLIC_KEY},
     io::{HttpClient as _, TarUnpacker, WrappedReader},
     manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource, PackageChanges},
@@ -1704,22 +1707,31 @@ fn verified_releases(
         .iter()
         .filter(|(name, _)| !provided.contains_key(name.as_str()))
         .map(|(name, version)| {
-            let package = package_fetcher
-                .get_package(name)
-                .map_err(|error| Error::DependencyResolutionError(error.to_string()))?;
+            let package = package_fetcher.get_package(name).map_err(|error| {
+                Error::DependencyResolutionError {
+                    reason: DependencyResolutionFailureReason::ErrorFetchingPackage {
+                        reason: Box::new(error),
+                    },
+                }
+            })?;
+
             let release = package
                 .releases
                 .iter()
                 .find(|release| &release.version == version)
-                .ok_or_else(|| {
-                    Error::DependencyResolutionError(format!(
-                        "The signed registry metadata for {name} did not include the release {version}"
-                    ))
+                .ok_or_else(|| Error::DependencyResolutionError {
+                    reason: DependencyResolutionFailureReason::MissingSignedVersion {
+                        package: name.clone(),
+                        version: version.clone(),
+                    },
                 })?;
             if release.outer_checksum.is_empty() {
-                return Err(Error::DependencyResolutionError(format!(
-                    "The signed registry metadata for {name}@{version} did not include a checksum"
-                )));
+                return Err(Error::DependencyResolutionError {
+                    reason: DependencyResolutionFailureReason::MissingSignedChecksum {
+                        package: name.clone(),
+                        version: version.clone(),
+                    },
+                });
             }
             let requirements = release
                 .requirements

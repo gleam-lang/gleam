@@ -2048,8 +2048,8 @@ fn verified_releases_errors_when_version_absent() {
 
     assert_matches!(
         verified_releases(&fetcher, &resolved, &HashMap::new()),
-        Err(Error::DependencyResolutionError(message))
-            if message == "The signed registry metadata for wibble did not include the release 1.0.0"
+        Err(Error::DependencyResolutionError{ reason })
+            if reason.describe() == "The signed registry metadata for wibble did not include the release 1.0.0"
     )
 }
 
@@ -2070,8 +2070,8 @@ fn verified_releases_errors_when_checksum_empty() {
 
     assert_matches!(
         verified_releases(&fetcher, &resolved, &HashMap::new()),
-        Err(Error::DependencyResolutionError(message))
-            if message == "The signed registry metadata for wibble@1.0.0 did not include a checksum"
+        Err(Error::DependencyResolutionError{ reason })
+            if reason.describe() == "The signed registry metadata for wibble@1.0.0 did not include a checksum"
     )
 }
 

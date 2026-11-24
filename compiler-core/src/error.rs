@@ -332,8 +332,10 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
         derivation_tree: Box<NeverEqual<ResolutionFailure>>,
     },
 
-    #[error("Dependency resolution failed: {0}")]
-    DependencyResolutionError(String),
+    #[error("Dependency resolution failed: {}", reason.describe())]
+    DependencyResolutionError {
+        reason: DependencyResolutionFailureReason,
+    },
 
     #[error("The package {0} is listed in dependencies and dev_dependencies")]
     DuplicateDependency(EcoString),
@@ -559,6 +561,66 @@ pub enum ShellCommandFailureReason {
     ShellCommandError(String),
 }
 
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub enum DependencyResolutionFailureReason {
+    ErrorRetrievingDependencies {
+        /// The package whose dependencies couldn't be retrieved.
+        package: String,
+        /// The version of the package whose dependencies couldn't be retrieved.
+        version: crate::dependency::Presence,
+        /// The reason the dependencies couldn't be retrieved.
+        reason: Box<Error>,
+    },
+    ErrorChoosingVersion {
+        /// The package for which an error choosing versions happened.
+        package: String,
+        /// The reason why we couldn't pick a version for the package.
+        reason: Box<Error>,
+    },
+    ErrorFetchingPackage {
+        /// The reason a package couldn't be fetched.
+        reason: Box<Error>,
+    },
+    /// This happens when the signed registry metadata for the given package did
+    /// not include the given version.
+    MissingSignedVersion { package: String, version: Version },
+    /// This happens when the signed registry metadata for the given package and
+    /// version does not include a checksum.
+    MissingSignedChecksum { package: String, version: Version },
+}
+
+impl DependencyResolutionFailureReason {
+    pub fn describe(&self) -> String {
+        match self {
+            DependencyResolutionFailureReason::ErrorRetrievingDependencies {
+                package,
+                version,
+                reason,
+            } => format!(
+                "An error occurred while trying to retrieve dependencies of {package}@{version}: {reason}",
+            ),
+            DependencyResolutionFailureReason::ErrorChoosingVersion { package, reason } => {
+                format!("An error occurred while choosing the version of {package}: {reason}",)
+            }
+            DependencyResolutionFailureReason::ErrorFetchingPackage { reason } => {
+                format!("{reason}")
+            }
+            DependencyResolutionFailureReason::MissingSignedVersion { package, version } => {
+                format!(
+                    "The signed registry metadata for {package} did not \
+include the release {version}"
+                )
+            }
+            DependencyResolutionFailureReason::MissingSignedChecksum { package, version } => {
+                format!(
+                    "The signed registry metadata for {package}@{version} did not \
+        include a checksum"
+                )
+            }
+        }
+    }
+}
+
 impl Error {
     /// An Http error that happened because of a `reqwest::Error` error.
     pub fn http_reqwest_error(error: reqwest::Error) -> Error {
@@ -630,19 +692,26 @@ impl Error {
                 package,
                 version,
                 source,
-            } => Self::DependencyResolutionError(format!(
-                "An error occurred while trying to retrieve dependencies of {package}@{version}: {source}",
-            )),
+            } => Self::DependencyResolutionError {
+                reason: DependencyResolutionFailureReason::ErrorRetrievingDependencies {
+                    package,
+                    version,
+                    reason: Box::new(source),
+                },
+            },
 
             ResolutionError::ErrorChoosingVersion { package, source } => {
-                Self::DependencyResolutionError(format!(
-                    "An error occurred while choosing the version of {package}: {source}",
-                ))
+                Self::DependencyResolutionError {
+                    reason: DependencyResolutionFailureReason::ErrorChoosingVersion {
+                        package,
+                        reason: Box::new(source),
+                    },
+                }
             }
 
-            ResolutionError::ErrorInShouldCancel(err) => Self::DependencyResolutionError(format!(
-                "Dependency resolution was cancelled. {err}"
-            )),
+            ResolutionError::ErrorInShouldCancel(_) => {
+                unreachable!("should_cancel is not implemented, so resolution should not time out")
+            }
         }
     }
 
@@ -2379,9 +2448,9 @@ manifest.toml and a version range specified in gleam.toml:
                 }]
             }
 
-            Error::DependencyResolutionError(error) => vec![Diagnostic {
+            Error::DependencyResolutionError { reason } => vec![Diagnostic {
                 title: "Dependency resolution failed".into(),
-                text: wrap(error),
+                text: wrap(&reason.describe()),
                 hint: None,
                 location: None,
                 level: Level::Error,
