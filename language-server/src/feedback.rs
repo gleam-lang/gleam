@@ -211,7 +211,7 @@ impl FeedbackBookKeeper {
             .files_with_warnings
             .iter()
             .chain(self.files_with_errors.iter())
-            .chain(self.skipped_files_diagnostics.keys().into_iter())
+            .chain(self.skipped_files_diagnostics.keys())
         {
             feedback.unset_existing_diagnostics(file.clone());
         }
