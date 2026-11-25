@@ -848,6 +848,23 @@ fn not_replacing() {
 }
 
 #[test]
+fn publish_package_response_too_large() {
+    let resp_body = json!({
+        "errors": {"tar": "File too big: metadata.config"},
+        "message": "Validation error(s)",
+        "status": 422,
+    });
+    let response = make_json_response(422, resp_body);
+    let result = crate::api_publish_package_response(response);
+
+    assert_matches!(
+        result,
+        Err(ApiError::FileTooBig(error_msg))
+        if error_msg == "File too big: metadata.config"
+    );
+}
+
+#[test]
 fn unknown_error_422() {
     let response_body = json!({
         "errors": {"tar": "file too big: metadata.config"},

@@ -106,6 +106,9 @@
   ([Andrey Kozhev](https://github.com/ankddev) and
   ([Louis Pilfold](https://github.com/lpil))
 
+- Better error message when a file in the release is too big
+  ([Ilya Shmygol](https://github.com/shmygol))
+
 ### Language server
 
 - The language server will now offer "Discard unused variable" on each of
