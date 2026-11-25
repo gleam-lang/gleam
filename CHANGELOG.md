@@ -360,9 +360,9 @@
   `@external`, and `@internal` attribute names.
   ([Max Wilhelmsson](https://github.com/Maoxen))
 
-- The language server will now discard projects when all project files have
-  been closed.
-
+- The language server will now stop analysing packages when all Gleam files
+  from the package have been closed have been closed, freeing used memory and
+  clearing any remaining diagnostics.
   ([TrippleCCC](https://github.com/TrippleCCC))
 
 ### Formatter
