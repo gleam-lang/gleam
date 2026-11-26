@@ -676,6 +676,9 @@ impl Command {
                 let paths = find_project_paths(directory)?;
                 export::package_information(&paths, output).map(|()| 0)
             }
+            Self::Export(ExportTarget::SystemInformation { output }) => {
+                export::system_information(output).map(|()| 0)
+            }
         }
     }
 }
@@ -733,6 +736,14 @@ pub enum ExportTarget {
     },
     /// Package information (gleam.toml) in JSON format
     PackageInformation {
+        /// (optional) The path to write the JSON file to.
+        ///
+        /// If ommited, the command will print to stdout.
+        #[arg(verbatim_doc_comment, long = "out")]
+        output: Option<Utf8PathBuf>,
+    },
+    /// System information on available/installed tooling
+    SystemInformation {
         /// (optional) The path to write the JSON file to.
         ///
         /// If ommited, the command will print to stdout.

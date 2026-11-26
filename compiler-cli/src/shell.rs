@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2020 The Gleam contributors
 
+use ecow::EcoString;
 use gleam_core::{
     analyse::TargetSupport,
     build::{Codegen, Compile, ErlangOutput, Mode, Options, Target},
@@ -50,4 +51,38 @@ pub fn command(paths: &ProjectPaths) -> Result<(), Error> {
         reason: ShellCommandFailureReason::IoError(error.kind()),
     })?;
     Ok(())
+}
+
+pub fn version<A, S>(program: EcoString, args: A) -> Result<EcoString, Error>
+where
+    A: IntoIterator<Item = S>,
+    S: AsRef<std::ffi::OsStr>,
+{
+    // Prepare the baseline command to be used
+    let mut binding = Command::new(&program);
+    let command = binding.args(args);
+
+    // Execute the command and get the output
+    tracing::info!("Running OS process {:?}", command);
+    let result = command.output().map_err(|error| Error::ShellCommand {
+        program: program.to_string(),
+        reason: ShellCommandFailureReason::IoError(error.kind()),
+    });
+
+    // Finally remap the result into a suitable value
+    result.and_then(|output| {
+        return match output.status.code() {
+            Some(0) => Ok(String::from_utf8_lossy(&output.stdout)
+                .trim()
+                .to_string()
+                .into()),
+
+            _ => Err(Error::ShellCommand {
+                program: program.to_string(),
+                reason: ShellCommandFailureReason::ShellCommandError(
+                    String::from_utf8_lossy(&output.stderr).to_string(),
+                ),
+            }),
+        };
+    })
 }
