@@ -43,12 +43,12 @@ pub struct PackageInformation {
 
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct VersionInformation {
-    pub version: String,
+    pub version: EcoString,
 }
 
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct SystemInformation {
-    pub erl: Option<VersionInformation>,
+    pub erlang: Option<VersionInformation>,
     pub bun: Option<VersionInformation>,
     pub node: Option<VersionInformation>,
     pub deno: Option<VersionInformation>,

@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2020 The Gleam contributors
 
+use ecow::EcoString;
 use gleam_core::{
     analyse::TargetSupport,
-    build::{Codegen, Compile, ErlangOutput, Mode, Options, Runtime, Target},
+    build::{Codegen, Compile, ErlangOutput, Mode, Options, Target},
     error::{Error, ShellCommandFailureReason},
     paths::ProjectPaths,
 };
@@ -52,28 +53,14 @@ pub fn command(paths: &ProjectPaths) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn version(target: Target, runtime: Option<Runtime>) -> Result<String, Error> {
-    let program = match target {
-        Target::Erlang => "erl",
-        Target::JavaScript => match runtime.unwrap() {
-            Runtime::Bun => "bun",
-            Runtime::Deno => "deno",
-            Runtime::NodeJs => "node",
-        },
-    };
-
+pub fn version<A, S>(program: EcoString, args: A) -> Result<EcoString, Error>
+where
+    A: IntoIterator<Item = S>,
+    S: AsRef<std::ffi::OsStr>,
+{
     // Prepare the baseline command to be used
-    let mut command = Command::new(program);
-
-    // Modify the arguments based on the program type
-    let _ = match target {
-        Target::Erlang =>  command.arg("-noshell").arg("-eval").arg("{ok, V} = file:read_file(filename:join([code:root_dir(), \"releases\", erlang:system_info(otp_release), \"OTP_VERSION\"])), io:frwrite(V), halt()."),
-        Target::JavaScript => match runtime.unwrap() {
-            Runtime::Bun =>  command.arg("-p").arg("Bun.version"),
-            Runtime::NodeJs => command.arg("-p").arg("process.versions.node"),
-            Runtime::Deno => command.arg("eval").arg("-p").arg("Deno.version.deno"),
-        },
-    };
+    let mut binding = Command::new(&program);
+    let command = binding.args(args);
 
     // Execute the command and get the output
     tracing::info!("Running OS process {:?}", command);
@@ -83,5 +70,19 @@ pub fn version(target: Target, runtime: Option<Runtime>) -> Result<String, Error
     });
 
     // Finally remap the result into a suitable value
-    result.map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string())
+    result.and_then(|output| {
+        return match output.status.code() {
+            Some(0) => Ok(String::from_utf8_lossy(&output.stdout)
+                .trim()
+                .to_string()
+                .into()),
+
+            _ => Err(Error::ShellCommand {
+                program: program.to_string(),
+                reason: ShellCommandFailureReason::ShellCommandError(
+                    String::from_utf8_lossy(&output.stderr).to_string(),
+                ),
+            }),
+        };
+    })
 }

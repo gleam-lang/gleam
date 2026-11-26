@@ -6,10 +6,11 @@ use crate::{
     shell,
 };
 use camino::Utf8PathBuf;
+use ecow::{EcoString, string::ToEcoString};
 use gleam_core::{
     Error, Result,
     analyse::TargetSupport,
-    build::{Codegen, Compile, ErlangOutput, Mode, Options, Runtime, Target},
+    build::{Codegen, Compile, ErlangOutput, Mode, Options, Target},
     docs, io,
     paths::ProjectPaths,
     type_::ModuleFunction,
@@ -23,6 +24,11 @@ static ENTRYPOINT_TEMPLATE_POWERSHELL: &str =
     include_str!("../templates/erlang-shipment-entrypoint.ps1");
 static ENTRYPOINT_TEMPLATE_POSIX_SHELL: &str =
     include_str!("../templates/erlang-shipment-entrypoint.sh");
+
+const VERSION_SCRIPT_BUN: &str = "Bun.version";
+const VERSION_SCRIPT_DENO: &str = "Deno.version.deno";
+const VERSION_SCRIPT_NODE: &str = "process.versions.node";
+const VERSION_SCRIPT_ERLANG: &str = "{ok, V} = file:read_file(filename:join([code:root_dir(), \"releases\", erlang:system_info(otp_release), \"OTP_VERSION\"])), io:frwrite(V), halt().";
 
 /// Generate a single file of precompiled Erlang, suitable for CLIs.
 ///
@@ -296,26 +302,42 @@ pub fn package_information(paths: &ProjectPaths, out: Option<Utf8PathBuf>) -> Re
     write_scoped_path_or_stdout(paths, out, information)
 }
 
-fn version_information(result: Result<String, Error>) -> Option<docs::VersionInformation> {
-    if result.is_err() {
-        return None;
+fn version_information(result: Result<EcoString, Error>) -> Option<docs::VersionInformation> {
+    match result {
+        Ok(version) => Some(docs::VersionInformation { version: version }),
+        Err(_) => None, // Todo: Give incompatibility or failure reason?
     }
+}
 
-    Some(docs::VersionInformation {
-        version: result.unwrap(),
-    })
+fn system_erlang_information() -> Result<EcoString, Error> {
+    shell::version(
+        "erl".to_eco_string(),
+        ["-noshell", "-eval", VERSION_SCRIPT_ERLANG],
+    )
+}
+
+fn system_bun_information() -> Result<EcoString, Error> {
+    shell::version("bun".to_eco_string(), ["-p", VERSION_SCRIPT_BUN])
+}
+
+fn system_deno_information() -> Result<EcoString, Error> {
+    shell::version("deno".to_eco_string(), ["eval", "-p", VERSION_SCRIPT_DENO])
+}
+
+fn system_node_information() -> Result<EcoString, Error> {
+    shell::version("node".to_eco_string(), ["-p", VERSION_SCRIPT_NODE])
 }
 
 pub fn system_information(out: Option<Utf8PathBuf>) -> Result<()> {
     // Read all the various runtime versions
-    let erl = shell::version(Target::Erlang, None);
-    let bun = shell::version(Target::JavaScript, Some(Runtime::Bun));
-    let deno = shell::version(Target::JavaScript, Some(Runtime::Deno));
-    let node = shell::version(Target::JavaScript, Some(Runtime::NodeJs));
+    let erlang = system_erlang_information();
+    let bun = system_bun_information();
+    let deno = system_deno_information();
+    let node = system_node_information();
 
     // Convert these values to a suitable JSON structure
     let information = docs::system_information_as_json(docs::SystemInformation {
-        erl: version_information(erl),
+        erlang: version_information(erlang),
         bun: version_information(bun),
         node: version_information(node),
         deno: version_information(deno),
