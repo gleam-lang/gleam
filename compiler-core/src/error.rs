@@ -567,11 +567,6 @@ impl Error {
         Self::Http(error.to_string())
     }
 
-    /// A generic Http error that happened because of a `core::Error` error.
-    pub fn http_core_error(error: Error) -> Error {
-        Self::Http(error.to_string())
-    }
-
     pub fn hex(error: hexpm::ApiError) -> Error {
         match error {
             hexpm::ApiError::Json(_)
