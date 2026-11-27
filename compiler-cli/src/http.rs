@@ -41,7 +41,7 @@ impl gleam_core::io::HttpClient for HttpClient {
         let request = request
             .try_into()
             .expect("Unable to convert HTTP request for use by reqwest library");
-        let client = init_client().map_err(Error::http_core_error)?;
+        let client = init_client()?;
         let mut response = client
             .execute(request)
             .await
