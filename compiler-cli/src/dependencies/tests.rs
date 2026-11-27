@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2024 The Gleam contributors
 
-use std::{assert_matches, collections::HashMap, rc::Rc};
+use std::{assert_matches, collections::HashMap, fs::FileTimes, rc::Rc};
 
 use camino::{Utf8Path, Utf8PathBuf};
 use ecow::EcoString;
@@ -1258,8 +1258,7 @@ version = \"1.0.0\"
     // Set fingerprint mtime to some time in the past. This causes the mtime check to fail,
     // so it moves on to checking the fingerprint itself.
     let past = std::time::SystemTime::now() - std::time::Duration::from_secs(10);
-    let past = filetime::FileTime::from_system_time(past);
-    filetime::set_file_mtime(&fingerprint_path, past).unwrap();
+    std::fs::set_times(&fingerprint_path, FileTimes::new().set_modified(past)).unwrap();
 
     let unchanged = path_dependency_configs_unchanged(&requirements, &paths).unwrap();
     assert!(unchanged, "mtime is outdated, but content has not changed");
@@ -1295,8 +1294,7 @@ wub = \">= 1.0.0\"
 ";
     fs::write(&dep_config_path, config).unwrap();
     let future = std::time::SystemTime::now() + std::time::Duration::from_secs(10);
-    let future = filetime::FileTime::from_system_time(future);
-    filetime::set_file_mtime(&fingerprint_path, future).unwrap();
+    std::fs::set_times(&fingerprint_path, FileTimes::new().set_modified(future)).unwrap();
 
     let unchanged = path_dependency_configs_unchanged(&requirements, &paths).unwrap();
     assert!(unchanged, "fingerprint is outdated, but mtime is not");

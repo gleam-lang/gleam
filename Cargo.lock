@@ -1522,7 +1522,6 @@ dependencies = [
  "ctrlc",
  "debug-ignore",
  "ecow",
- "filetime",
  "flate2",
  "fs_extra",
  "fslock",
