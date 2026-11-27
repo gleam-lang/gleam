@@ -757,7 +757,7 @@ pub fn symlink_dir(src: impl AsRef<Utf8Path>, dest: impl AsRef<Utf8Path>) -> Res
     #[cfg(target_family = "windows")]
     let result = std::os::windows::fs::symlink_dir(&src, dest);
     #[cfg(not(target_family = "windows"))]
-    let result = std::os::unix::fs::symlink(&src, dest);
+    let result = std::os::unix::fs::symlink(src, dest);
 
     result.map_err(|error| Error::FileIo {
         action: FileIoAction::Link(dest.to_path_buf()),
