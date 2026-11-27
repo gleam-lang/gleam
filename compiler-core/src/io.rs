@@ -3,10 +3,6 @@
 
 pub mod memory;
 
-use crate::error::{Error, FileIoAction, FileIoCause, FileKind, Result};
-use async_trait::async_trait;
-use debug_ignore::DebugIgnore;
-use flate2::read::GzDecoder;
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     fmt::Debug,
@@ -15,9 +11,14 @@ use std::{
     time::SystemTime,
     vec::IntoIter,
 };
+
+use async_trait::async_trait;
+use camino::{Utf8Component, Utf8Path, Utf8PathBuf};
+use debug_ignore::DebugIgnore;
+use flate2::read::GzDecoder;
 use tar::{Archive, Entry};
 
-use camino::{Utf8Component, Utf8Path, Utf8PathBuf};
+use crate::error::{Error, FileIoAction, FileIoCause, FileKind, Result};
 
 /// Validates that a path is safe to use as a relative path.
 pub fn validate_safe_relative_path(path: &Utf8Path) -> Result<(), &'static str> {
@@ -75,6 +76,64 @@ fn strip_windows_verbatim_prefix_removes_prefix() {
         strip_windows_verbatim_prefix(Utf8Path::new(r"\\?\C:\app\src\app.gleam")),
         Utf8Path::new(r"C:\app\src\app.gleam")
     );
+}
+
+#[cfg(not(windows))]
+#[test]
+fn test_make_relative_normal_case() {
+    let result = make_relative(
+        "/home/user/gleam_project/build/dev/erlang/lustre".into(),
+        "/home/user/gleam_project/build/packages/lustre/priv".into(),
+    );
+
+    assert_eq!(result, Utf8PathBuf::from("../../../packages/lustre/priv"));
+}
+
+#[cfg(windows)]
+#[test]
+fn test_make_relative_normal_case() {
+    let result = make_relative(
+        r"C:\User\gleam_project\build\dev\erlang\lustre".into(),
+        r"C:\User\gleam_project\build\packages\lustre\priv".into(),
+    );
+
+    assert_eq!(result, Utf8PathBuf::from(r"..\..\..\packages\lustre\priv"));
+}
+
+#[cfg(not(windows))]
+#[test]
+fn test_make_relative_dest_relative_does_nothing() {
+    let result = make_relative(
+        "/home/user/gleam_project/build/dev/erlang/lustre".into(),
+        "../../target".into(),
+    );
+
+    assert_eq!(result, Utf8PathBuf::from("../../target"));
+}
+
+#[cfg(windows)]
+#[test]
+fn test_make_relative_dest_relative_does_nothing() {
+    let result = make_relative(
+        r"C:\User\gleam_project\build\dev\erlang\lustre".into(),
+        r"..\..\target".into(),
+    );
+
+    assert_eq!(result, Utf8PathBuf::from(r"..\..\target"));
+}
+
+#[cfg(not(windows))]
+#[test]
+#[should_panic]
+fn test_make_relative_source_relative_panics() {
+    let _ = make_relative("../dev/erlang/lustre".into(), "/".into());
+}
+
+#[cfg(windows)]
+#[test]
+#[should_panic]
+fn test_make_relative_source_relative_panics() {
+    let _ = make_relative(r"..\dev\erlang\lustre".into(), r"\".into());
 }
 
 pub trait Reader: io::Read {
