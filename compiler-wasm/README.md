@@ -15,3 +15,11 @@ wasm-pack build --release --target web
 # Make a tarball to attach to a release
 tar -C pkg/ -czvf gleam-v1.1.0-browser.tar.gz .
 ```
+
+If the build fails on macOS you may have more success using Clang from Brew's
+LLVM package.
+
+```sh
+brew install llvm
+CC="$(brew --prefix llvm)/bin/clang" wasm-pack build --release --target web
+````
