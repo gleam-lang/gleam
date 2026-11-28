@@ -2911,7 +2911,7 @@ not be found in the Hex package repository."
             Error::MainFunctionDoesNotSupportTarget { module, .. } => {
                 format!("{module}'s main function does not support the current target")
             }
-            Error::InvalidVersionFormat { reason } => reason.to_short_string(),
+            Error::InvalidVersionFormat { reason } => reason.summary(),
             Error::IncompatibleLockedVersion { error } => {
                 format!("incompatible locked version. {error}")
             }

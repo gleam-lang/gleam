@@ -44,7 +44,7 @@ pub struct InvalidVersionFormat {
 }
 
 impl InvalidVersionFormat {
-    pub fn to_short_string(&self) -> String {
+    pub fn summary(&self) -> String {
         let InvalidVersionFormat { input, error } = self;
         format!("{input} is not a valid version. {error}")
     }
@@ -169,7 +169,7 @@ impl<'de> Visitor<'de> for RequirementVisitor {
     {
         match value.parse::<Requirement>() {
             Ok(value) => Ok(value),
-            Err(error) => Err(de::Error::custom(error.to_short_string())),
+            Err(error) => Err(de::Error::custom(error.summary())),
         }
     }
 
