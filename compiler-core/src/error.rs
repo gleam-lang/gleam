@@ -658,7 +658,7 @@ impl Error {
             | hexpm::ApiError::LateDeletion
             | hexpm::ApiError::OAuthTimeout
             | hexpm::ApiError::OAuthAccessDenied
-            | hexpm::ApiError::ExpiredToken => Self::Hex(error.summary()),
+            | hexpm::ApiError::ExpiredToken => Self::Hex(error.summarise()),
 
             hexpm::ApiError::OAuthRefreshTokenRejected => Self::HexSessionRevoked,
 
@@ -2911,7 +2911,7 @@ not be found in the Hex package repository."
             Error::MainFunctionDoesNotSupportTarget { module, .. } => {
                 format!("{module}'s main function does not support the current target")
             }
-            Error::InvalidVersionFormat { reason } => reason.summary(),
+            Error::InvalidVersionFormat { reason } => reason.summarise(),
             Error::IncompatibleLockedVersion { error } => {
                 format!("incompatible locked version. {error}")
             }
