@@ -15,8 +15,7 @@ use gleam_core::{
         StringPrefixLeftSideAssignment, TodoKind, TypeAstConstructorName, TypedArg,
         TypedAssignment, TypedClauseGuard, TypedCustomType, TypedDefinition, TypedDefinitions,
         TypedExpr, TypedFunction, TypedModuleConstant, TypedPattern, TypedPipelineAssignment,
-        TypedRecordConstructor, TypedStatement, TypedTailPattern, TypedTypeAlias, TypedUse,
-        visit::Visit as _,
+        TypedRecordConstructor, TypedStatement, TypedTailPattern, TypedUse, visit::Visit as _,
     },
     build::{Located, Module, Origin},
     config::PackageConfig,
@@ -1327,7 +1326,7 @@ pub fn code_action_generate_type(
                 let (insertion_position, prefix_newline) = match definition {
                     // Types -> generate below
                     TypedDefinition::CustomType(_) | TypedDefinition::TypeAlias(_) => {
-                        (definition.full_location().end, "")
+                        (definition.full_location().end, "\n\n")
                     }
 
                     // Functions and constants -> generate above
@@ -1345,11 +1344,11 @@ pub fn code_action_generate_type(
                                     documentation_start - 3
                                 }
                             },
-                            "\n\n",
+                            "",
                         )
                     }
 
-                    TypedDefinition::Constant(constant) => (constant.location.end, "\n\n"),
+                    TypedDefinition::Constant(constant) => (constant.location.start, ""),
                 };
 
                 (
