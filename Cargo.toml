@@ -66,8 +66,6 @@ lsp-types = { package = "gen-lsp-types", version = "0.5.0", features = ["url"] }
 ecow = "0"
 # Drop in replacement for std::path but with only utf-8
 camino = "1"
-# std::error::Error definition macro
-thiserror = "2"
 # Test assertion errors with diffs
 pretty_assertions = "1"
 # Snapshot testing to make test maintenance easier
