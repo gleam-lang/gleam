@@ -588,7 +588,7 @@ fn get_package_response_unauthorized() {
     )
     .unwrap_err();
 
-    assert_eq!(error.describe(), "Invalid authentication credentials");
+    assert_eq!(error.summary(), "Invalid authentication credentials");
 }
 
 #[test]
@@ -733,7 +733,7 @@ fn get_repository_tarball_response_bad_checksum() {
     let error = crate::repository_get_package_tarball_response(response, &checksum).unwrap_err();
 
     assert_eq!(
-        error.describe(),
+        error.summary(),
         "The downloaded data did not have the expected checksum"
     );
 }
@@ -745,7 +745,7 @@ fn get_repository_tarball_response_not_found() {
     let response = make_response(404, vec![]);
     let error = crate::repository_get_package_tarball_response(response, &checksum).unwrap_err();
 
-    assert_eq!(error.describe(), "Resource was not found");
+    assert_eq!(error.summary(), "Resource was not found");
 }
 
 #[test]
@@ -756,7 +756,7 @@ fn get_repository_tarball_response_rate_limited() {
     let error = crate::repository_get_package_tarball_response(response, &checksum).unwrap_err();
 
     assert_eq!(
-        error.describe(),
+        error.summary(),
         "The rate limit for the Hex API has been exceeded"
     );
 }
@@ -1209,7 +1209,7 @@ fn get_package_release_response_requirement_invalid_app_name() {
     let response = make_json_response(200, response_body);
     let error = crate::api_get_package_release_response(response).unwrap_err();
     assert_eq!(
-        error.describe(),
+        error.summary(),
         "not a valid package name at line 1 column 179"
     );
 }
@@ -1229,7 +1229,7 @@ fn get_package_release_response_meta_invalid_app_name() {
     let response = make_json_response(200, response_body);
     let error = crate::api_get_package_release_response(response).unwrap_err();
     assert_eq!(
-        error.describe(),
+        error.summary(),
         "not a valid package name at line 1 column 118"
     );
 }

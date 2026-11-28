@@ -777,7 +777,7 @@ impl ApiError {
         matches!(self, Self::InvalidProtobuf(_))
     }
 
-    pub fn describe(&self) -> String {
+    pub fn summary(&self) -> String {
         match self {
             ApiError::Json(error) => error.to_string(),
             ApiError::Io(error) => error.to_string(),
