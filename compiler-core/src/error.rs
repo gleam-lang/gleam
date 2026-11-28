@@ -594,31 +594,33 @@ pub enum DependencyResolutionFailureReason {
 }
 
 impl DependencyResolutionFailureReason {
-    pub fn summary(&self) -> String {
+    pub fn summarise(&self) -> EcoString {
         match self {
             DependencyResolutionFailureReason::ErrorRetrievingDependencies {
                 package,
                 version,
                 reason,
-            } => format!(
+            } => eco_format!(
                 "An error occurred while trying to retrieve dependencies of {package}@{version}: {}",
                 reason.summarise()
             ),
-            DependencyResolutionFailureReason::ErrorChoosingVersion { package, reason } => format!(
-                "An error occurred while choosing the version of {package}: {}",
-                reason.summarise()
-            ),
+            DependencyResolutionFailureReason::ErrorChoosingVersion { package, reason } => {
+                eco_format!(
+                    "An error occurred while choosing the version of {package}: {}",
+                    reason.summarise()
+                )
+            }
             DependencyResolutionFailureReason::ErrorFetchingPackage { reason } => {
                 reason.summarise()
             }
             DependencyResolutionFailureReason::MissingSignedVersion { package, version } => {
-                format!(
+                eco_format!(
                     "The signed registry metadata for {package} did not \
 include the release {version}"
                 )
             }
             DependencyResolutionFailureReason::MissingSignedChecksum { package, version } => {
-                format!(
+                eco_format!(
                     "The signed registry metadata for {package}@{version} did not \
         include a checksum"
                 )
@@ -2457,7 +2459,7 @@ manifest.toml and a version range specified in gleam.toml:
 
             Error::DependencyResolutionError { reason } => vec![Diagnostic {
                 title: "Dependency resolution failed".into(),
-                text: wrap(&reason.summary()),
+                text: wrap(&reason.summarise()),
                 hint: None,
                 location: None,
                 level: Level::Error,
@@ -2854,18 +2856,18 @@ not be found in the Hex package repository."
 
     /// Turns the error into a brief summary suitable to be imbedded inside
     /// other error messages.
-    pub fn summarise(&self) -> String {
+    pub fn summarise(&self) -> EcoString {
         match self {
             Error::Parse { .. } => "failed to parse Gleam source code".into(),
             Error::Type { .. } => "type checking failed".into(),
-            Error::UnknownImport { import, .. } => format!("unknown import {import}"),
-            Error::DuplicateModule { module, .. } => format!("duplicate module {module}"),
-            Error::DuplicateSourceFile { file } => format!("duplicate source file {file}"),
+            Error::UnknownImport { import, .. } => eco_format!("unknown import {import}"),
+            Error::DuplicateModule { module, .. } => eco_format!("duplicate module {module}"),
+            Error::DuplicateSourceFile { file } => eco_format!("duplicate source file {file}"),
             Error::DuplicateNativeErlangModule { module, .. } => {
-                format!("duplicate native Erlang module {module}")
+                eco_format!("duplicate native Erlang module {module}")
             }
             Error::ClashingGleamModuleAndNativeFileName { module, .. } => {
-                format!("gleam module {module} clashes with native file of same name")
+                eco_format!("gleam module {module} clashes with native file of same name")
             }
             Error::ImportCycle { .. } => "cyclical module imports".into(),
             Error::PackageCycle { .. } => "cyclical package dependencies".into(),
@@ -2874,146 +2876,152 @@ not be found in the Hex package repository."
                 path,
                 cause,
                 ..
-            } => format!("{action:?} {path:?} failed: {cause:?}"),
-            Error::NonUtf8Path { path } => format!("Non Utf-8 Path: {}", path.display()),
+            } => eco_format!("{action:?} {path:?} failed: {cause:?}"),
+            Error::NonUtf8Path { path } => eco_format!("Non Utf-8 Path: {}", path.display()),
             Error::GitInitialization { error } => error.summarise(),
-            Error::LspMessageSendFailed { error } => format!("Failed to send LSP message: {error}"),
+            Error::LspMessageSendFailed { error } => {
+                eco_format!("Failed to send LSP message: {error}")
+            }
             Error::LspMessageReceiveFailed { error } => {
-                format!("Failed to receive LSP message: {error}")
+                eco_format!("Failed to receive LSP message: {error}")
             }
             Error::StandardIo { .. } => "io operation failed".into(),
             Error::Format { .. } => "source code incorrectly formatted".into(),
-            Error::Hex(error) => format!("Hex error: {error}"),
-            Error::ExpandTar { error } => error.to_string(),
-            Error::AddTar { err, .. } => err.to_string(),
-            Error::TarFinish(error) => error.to_string(),
-            Error::ZipAdd { error, .. } => error.to_string(),
-            Error::ZipFinish(error) => error.to_string(),
-            Error::Gzip(error) => error.to_string(),
+            Error::Hex(error) => eco_format!("Hex error: {error}"),
+            Error::ExpandTar { error } => EcoString::from(error.to_string()),
+            Error::AddTar { err, .. } => EcoString::from(err.to_string()),
+            Error::TarFinish(error) => EcoString::from(error.to_string()),
+            Error::ZipAdd { error, .. } => EcoString::from(error.to_string()),
+            Error::ZipFinish(error) => EcoString::from(error.to_string()),
+            Error::Gzip(error) => EcoString::from(error.to_string()),
             Error::ShellProgramNotFound { program, .. } => {
-                format!("shell program `{program}` not found")
+                eco_format!("shell program `{program}` not found")
             }
-            Error::ShellCommand { program, .. } => format!("shell program `{program}` failed"),
+            Error::ShellCommand { program, .. } => eco_format!("shell program `{program}` failed"),
             Error::InvalidProjectName { name, .. } => {
-                format!("{name} is not a valid project name")
+                eco_format!("{name} is not a valid project name")
             }
-            Error::InvalidModuleName { module } => format!("{module} is not a valid module name"),
-            Error::ModuleDoesNotExist { module, .. } => format!("{module} is not module"),
+            Error::InvalidModuleName { module } => {
+                eco_format!("{module} is not a valid module name")
+            }
+            Error::ModuleDoesNotExist { module, .. } => eco_format!("{module} is not module"),
             Error::ModuleDoesNotHaveMainFunction { module, .. } => {
-                format!("{module} does not have a main function")
+                eco_format!("{module} does not have a main function")
             }
             Error::MainFunctionIsPrivate { module } => {
-                format!("{module} does not have a public main function")
+                eco_format!("{module} does not have a public main function")
             }
             Error::MainFunctionHasWrongArity { module, .. } => {
-                format!("{module}'s main function has the wrong arity so it can not be run")
+                eco_format!("{module}'s main function has the wrong arity so it can not be run")
             }
             Error::MainFunctionDoesNotSupportTarget { module, .. } => {
-                format!("{module}'s main function does not support the current target")
+                eco_format!("{module}'s main function does not support the current target")
             }
             Error::InvalidVersionFormat { reason } => reason.summarise(),
             Error::IncompatibleLockedVersion { error } => {
-                format!("incompatible locked version. {error}")
+                eco_format!("incompatible locked version. {error}")
             }
             Error::ProjectRootAlreadyExist { .. } => "project root already exists".into(),
-            Error::OutputFilesAlreadyExist { file_names } => format!(
+            Error::OutputFilesAlreadyExist { file_names } => eco_format!(
                 "File(s) already exist in {}",
                 file_names.iter().map(|x| x.as_str()).join(", ")
             ),
             Error::RemovedPackageNamesInvalid { packages, .. } => {
-                format!("Invalid package names: {}", packages.iter().join(", "))
+                eco_format!("Invalid package names: {}", packages.iter().join(", "))
             }
             Error::RemovedPackagesNotExist { packages } => {
-                format!("Packages not exist: {}", packages.iter().join(", "))
+                eco_format!("Packages not exist: {}", packages.iter().join(", "))
             }
-            Error::PackagesToUpdateNotExist { packages } => format!(
+            Error::PackagesToUpdateNotExist { packages } => eco_format!(
                 "Packages to update not exist: {}",
                 packages.iter().join(", ")
             ),
             Error::UnableToFindProjectRoot { .. } => "unable to find project root".into(),
             Error::VersionDoesNotMatch { toml_ver, app_ver } => {
-                format!("gleam.toml version {toml_ver} does not match .app version {app_ver}")
+                eco_format!("gleam.toml version {toml_ver} does not match .app version {app_ver}")
             }
             Error::ForbiddenWarnings { .. } => "warnings are not permitted".into(),
             Error::InvalidRuntime {
                 target,
                 invalid_runtime,
-            } => format!("Invalid runtime for target {target:?}: {invalid_runtime:?}"),
+            } => eco_format!("Invalid runtime for target {target:?}: {invalid_runtime:?}"),
             Error::FailedToDownloadPackageVersionFromHex {
                 name,
                 version,
                 error,
-            } => format!("failed to download {name}@{version} from Hex: {error}"),
-            Error::Http(error) => error.clone(),
+            } => eco_format!("failed to download {name}@{version} from Hex: {error}"),
+            Error::Http(error) => EcoString::from(error),
             Error::DependencyCanonicalizationFailed(error) => {
-                format!("Failed to create canonical path for package {error}")
+                eco_format!("Failed to create canonical path for package {error}")
             }
             Error::DependencyResolutionNoSolution { .. } => {
                 "Could not find versions that satisfy dependency requirements".into()
             }
             Error::DependencyResolutionError { reason } => {
-                format!("Dependency resolution failed: {}", reason.summary())
+                eco_format!("Dependency resolution failed: {}", reason.summarise())
             }
             Error::DuplicateDependency(package) => {
-                format!("The package {package} is listed in dependencies and dev_dependencies")
+                eco_format!("The package {package} is listed in dependencies and dev_dependencies")
             }
             Error::WrongDependencyProvided {
                 path,
                 expected,
                 found,
-            } => format!("Expected package {expected} at path {path} but found {found} instead"),
+            } => {
+                eco_format!("Expected package {expected} at path {path} but found {found} instead")
+            }
             Error::ProvidedDependencyConflict {
                 package,
                 source_1,
                 source_2,
-            } => format!(
+            } => eco_format!(
                 "The package {package} is provided multiple times, as {source_1} and {source_2}"
             ),
             Error::GitDependencyPathNotFound {
                 package,
                 path,
                 repo,
-            } => format!(
+            } => eco_format!(
                 "The path {path} does not exist in the git repository {repo} for package {package}"
             ),
             Error::MissingHexPublishFields { .. } => {
                 "The package was missing required fields for publishing".into()
             }
             Error::PublishNonHexDependencies { package } => {
-                format!("Dependency {package:?} has not been published to Hex")
+                eco_format!("Dependency {package:?} has not been published to Hex")
             }
             Error::UnsupportedBuildTool {
                 package,
                 build_tools,
-            } => format!("The package {package} uses unsupported build tools {build_tools:?}"),
+            } => eco_format!("The package {package} uses unsupported build tools {build_tools:?}"),
             Error::FailedToOpenDocs { path, error } => {
-                format!("Opening docs at {path} failed: {error}")
+                eco_format!("Opening docs at {path} failed: {error}")
             }
             Error::IncompatibleCompilerVersion {
                 package,
                 required_version,
                 gleam_version,
-            } => format!(
+            } => eco_format!(
                 "The package {package} requires a Gleam version satisfying \
 {required_version} and you are using v{gleam_version}"
             ),
             Error::JavaScriptPreludeRequired => {
                 "The --javascript-prelude flag must be given when compiling to JavaScript".into()
             }
-            Error::CannotPublishTodo { unfinished } => format!(
+            Error::CannotPublishTodo { unfinished } => eco_format!(
                 "The modules {unfinished:?} contain todo expressions and so \
 cannot be published"
             ),
-            Error::CannotPublishEcho { unfinished } => format!(
+            Error::CannotPublishEcho { unfinished } => eco_format!(
                 "The modules {unfinished:?} contain todo expressions and so \
 cannot be published"
             ),
-            Error::CannotPublishLeakedInternalType { unfinished } => format!(
+            Error::CannotPublishLeakedInternalType { unfinished } => eco_format!(
                 "The modules {unfinished:?} contain internal types in their \
 public API so cannot be published"
             ),
             Error::CannotPublishEmptyModules { unfinished } => {
-                format!("The modules {unfinished:?} are empty and so cannot be published")
+                eco_format!("The modules {unfinished:?} are empty and so cannot be published")
             }
             Error::CannotPublishWithInvalidReadme { .. } => {
                 "Publishing packages with an invalid README is not permitted".into()
@@ -3026,11 +3034,11 @@ public API so cannot be published"
             }
             Error::CorruptManifest => "Corrupt manifest.toml".into(),
             Error::GleamModuleWouldOverwriteStandardErlangModule { name, path } => {
-                format!("The Gleam module {path} would overwrite the Erlang module {name}")
+                eco_format!("The Gleam module {path} would overwrite the Erlang module {name}")
             }
             Error::HexPublishReplaceRequired { .. } => "Version already published".into(),
             Error::HexPublishAccessDenied { name, version } => {
-                format!("Insufficient permissions to publish {name} {version}")
+                eco_format!("Insufficient permissions to publish {name} {version}")
             }
             Error::CannotPublishWrongVersion { .. } => {
                 "The gleam version constraint is wrong and so cannot be published".into()
@@ -3044,23 +3052,23 @@ public API so cannot be published"
             }
             Error::HexSessionRevoked => "Hex session revoked".into(),
             Error::IncorrectHexOneTimePassword => "Incorrect Hex one-time-password".into(),
-            Error::TarPathOutsideOfProjectRoot { path } => format!(
+            Error::TarPathOutsideOfProjectRoot { path } => eco_format!(
                 "{path} could not be added to the tarball as it is outside the project root"
             ),
             Error::CouldNotCreateTempFile { error } => {
-                format!("could not create temp file: {error}")
+                eco_format!("could not create temp file: {error}")
             }
             Error::AddedDependenciesAreAlreadyDevDependencies { packages } => {
-                format!("these packages are already dev dependencies: {packages:?}")
+                eco_format!("these packages are already dev dependencies: {packages:?}")
             }
             Error::AddedDevDependenciesAreAlreadyDependencies { packages } => {
-                format!("these packages are already dependencies: {packages:?}")
+                eco_format!("these packages are already dependencies: {packages:?}")
             }
             Error::DocumentationPageOutsidePackage { path } => {
-                format!("the documentation page {path} is outside the package directory")
+                eco_format!("the documentation page {path} is outside the package directory")
             }
             Error::CouldNotFindPackageVersionInHexRepo { package, version } => {
-                format!("could not find {package}@{version} in the Hex repo")
+                eco_format!("could not find {package}@{version} in the Hex repo")
             }
         }
     }
