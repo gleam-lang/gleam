@@ -125,29 +125,17 @@ pub struct TypedDefinitions {
 }
 
 impl TypedDefinitions {
-    /// Returns an iterator of module-local definitions. This is all typed defintions excluding
-    /// imports. This function is useful for performing code actions on local definitions within
-    /// a module. For example, it is used for automatically generating a missing type definition.
-    pub fn iter_local<'a>(&'a self) -> impl Iterator<Item = ModuleLocalTypedDefinition<'a>> {
-        let constants = self
-            .constants
-            .iter()
-            .map(ModuleLocalTypedDefinition::Constant);
+    /// Returns an iterator of definitions, excluding imports.
+    /// This function is useful for performing code actions on local definitions.
+    /// For example, it is used for automatically generating a missing type definition.
+    pub fn iter_definitions<'a>(&'a self) -> impl Iterator<Item = TypedDefinition<'a>> {
+        let constants = self.constants.iter().map(TypedDefinition::Constant);
 
-        let functions = self
-            .functions
-            .iter()
-            .map(ModuleLocalTypedDefinition::Function);
+        let functions = self.functions.iter().map(TypedDefinition::Function);
 
-        let custom_types = self
-            .custom_types
-            .iter()
-            .map(ModuleLocalTypedDefinition::CustomType);
+        let custom_types = self.custom_types.iter().map(TypedDefinition::CustomType);
 
-        let type_aliases = self
-            .type_aliases
-            .iter()
-            .map(ModuleLocalTypedDefinition::TypeAlias);
+        let type_aliases = self.type_aliases.iter().map(TypedDefinition::TypeAlias);
 
         constants
             .chain(functions)
@@ -156,46 +144,31 @@ impl TypedDefinitions {
     }
 }
 
-/// Module-local definitions are defined within the current module, and can have
-/// code actions performed to alter them within this file.
+/// Contains a reference to a typed definition.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ModuleLocalTypedDefinition<'a> {
+pub enum TypedDefinition<'a> {
     Constant(&'a TypedModuleConstant),
     CustomType(&'a TypedCustomType),
     TypeAlias(&'a TypedTypeAlias),
     Function(&'a TypedFunction),
 }
 
-impl<'a> ModuleLocalTypedDefinition<'a> {
+impl<'a> TypedDefinition<'a> {
     pub const fn publicity(&self) -> Publicity {
         match self {
-            ModuleLocalTypedDefinition::Constant(constant) => constant.publicity,
-            ModuleLocalTypedDefinition::CustomType(custom_type) => custom_type.publicity,
-            ModuleLocalTypedDefinition::TypeAlias(type_alias) => type_alias.publicity,
-            ModuleLocalTypedDefinition::Function(function) => function.publicity,
+            TypedDefinition::Constant(constant) => constant.publicity,
+            TypedDefinition::CustomType(custom_type) => custom_type.publicity,
+            TypedDefinition::TypeAlias(type_alias) => type_alias.publicity,
+            TypedDefinition::Function(function) => function.publicity,
         }
     }
 
     pub fn full_location(&self) -> SrcSpan {
         match self {
-            ModuleLocalTypedDefinition::Constant(module_constant) => module_constant.location,
-            ModuleLocalTypedDefinition::CustomType(custom_type) => custom_type.full_location(),
-            ModuleLocalTypedDefinition::TypeAlias(type_alias) => type_alias.location,
-            ModuleLocalTypedDefinition::Function(function) => {
-                // If the function has any doc comments we want the generated type to
-                // end up above the doc comment too! So we consider the documentation's
-                // start as the start of the function definition.
-                let full_location_with_docs = match function.documentation {
-                    None => function.full_location(),
-                    Some((documentation_start, _)) => {
-                        // The `documentation_start` we track here is the start of the
-                        // written content right after the `///`, so we also need to
-                        // subtract 3 here to make sure we start before the `///`.
-                        SrcSpan::new(documentation_start - 3, function.full_location().end)
-                    }
-                };
-                full_location_with_docs
-            }
+            TypedDefinition::Constant(module_constant) => module_constant.location,
+            TypedDefinition::CustomType(custom_type) => custom_type.full_location(),
+            TypedDefinition::TypeAlias(type_alias) => type_alias.location,
+            TypedDefinition::Function(function) => function.full_location(),
         }
     }
 }
