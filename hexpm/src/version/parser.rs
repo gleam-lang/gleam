@@ -9,11 +9,10 @@ use std::mem;
 use self::Error::*;
 use super::lexer::{self, Lexer, Token};
 use crate::version::{Identifier, Version};
-use thiserror::Error;
 
 type PubgrubRange = pubgrub::Range<Version>;
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Error)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Error {
     /// Needed more tokens for parsing, but none are available.
     UnexpectedEnd,

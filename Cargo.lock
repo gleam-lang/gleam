@@ -1615,7 +1615,6 @@ dependencies = [
  "strum",
  "tar",
  "termcolor",
- "thiserror 2.0.21",
  "time",
  "toml 1.2.2+spec-1.1.0",
  "tracing",
@@ -1762,7 +1761,6 @@ dependencies = [
  "ring",
  "serde",
  "serde_json",
- "thiserror 2.0.21",
  "toml 1.2.2+spec-1.1.0",
  "x509-parser",
 ]
