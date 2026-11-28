@@ -656,7 +656,7 @@ impl Error {
             | hexpm::ApiError::LateDeletion
             | hexpm::ApiError::OAuthTimeout
             | hexpm::ApiError::OAuthAccessDenied
-            | hexpm::ApiError::ExpiredToken => Self::Hex(error.to_string()),
+            | hexpm::ApiError::ExpiredToken => Self::Hex(error.describe()),
 
             hexpm::ApiError::OAuthRefreshTokenRejected => Self::HexSessionRevoked,
 

@@ -107,9 +107,8 @@ impl std::fmt::Display for Token<'_> {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, thiserror::Error)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Error {
-    #[error("Unexpected character {0}")]
     UnexpectedCharacter(char),
 }
 

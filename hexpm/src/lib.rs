@@ -26,7 +26,6 @@ use std::{
     convert::{TryFrom, TryInto},
     io::{BufReader, Read},
 };
-use thiserror::Error;
 use version::{Range, Version};
 use x509_parser::prelude::FromDer;
 
@@ -737,69 +736,28 @@ pub fn api_remove_owner_response(response: http::Response<Vec<u8>>) -> Result<()
     }
 }
 
-#[derive(Error, Debug)]
+#[derive(Debug)]
 pub enum ApiError {
-    #[error(transparent)]
     Json(serde_json::Error),
-
-    #[error(transparent)]
     Io(std::io::Error),
-
-    #[error("The rate limit for the Hex API has been exceeded")]
     RateLimited,
-
-    #[error("Invalid authentication credentials")]
     InvalidCredentials,
-
-    #[error("An unexpected response was sent by Hex: {0}: {1}")]
     UnexpectedResponse(StatusCode, String),
-
-    #[error("The given package name {0} is not valid")]
     InvalidPackageNameFormat(String),
-
-    #[error("The payload signature does not match the downloaded payload")]
     IncorrectPayloadSignature,
-
-    #[error(transparent)]
     InvalidProtobuf(prost::DecodeError),
-
-    #[error("Unexpected version format {0}")]
     InvalidVersionFormat(String),
-
-    #[error("Resource was not found")]
     NotFound,
-
-    #[error("The version requirement format {0} is not valid")]
     InvalidVersionRequirementFormat(String),
-
-    #[error("The downloaded data did not have the expected checksum")]
     IncorrectChecksum,
-
-    #[error("This account is not authorized for this action")]
     Forbidden,
-
-    #[error("Must explicitly express your intention to replace the release")]
     NotReplacing,
-
-    #[error("Can only modify a release up to one hour after publication")]
     LateModification,
-
-    #[error("Can only delete a release up to one hour after publication")]
     LateDeletion,
-
-    #[error("The oauth request wasn't approved in time")]
     OAuthTimeout,
-
-    #[error("The oauth request was rejected")]
     OAuthAccessDenied,
-
-    #[error("The oauth token expired before the request was approved")]
     ExpiredToken,
-
-    #[error("The oauth refresh token was expired, revoked, or already used")]
     OAuthRefreshTokenRejected,
-
-    #[error("The supplied one-time-password was not correct")]
     IncorrectOneTimePassword,
 }
 
@@ -817,6 +775,54 @@ impl ApiError {
 
     pub fn is_invalid_protobuf(&self) -> bool {
         matches!(self, Self::InvalidProtobuf(_))
+    }
+
+    pub fn describe(&self) -> String {
+        match self {
+            ApiError::Json(error) => error.to_string(),
+            ApiError::Io(error) => error.to_string(),
+            ApiError::RateLimited => "The rate limit for the Hex API has been exceeded".into(),
+            ApiError::InvalidCredentials => "Invalid authentication credentials".into(),
+            ApiError::UnexpectedResponse(status_code, message) => {
+                format!("An unexpected response was sent by Hex: {status_code}: {message}")
+            }
+            ApiError::InvalidPackageNameFormat(package) => {
+                format!("The given package name {package} is not valid")
+            }
+            ApiError::IncorrectPayloadSignature => {
+                "The payload signature does not match the downloaded payload".into()
+            }
+            ApiError::InvalidProtobuf(decode_error) => decode_error.to_string(),
+            ApiError::InvalidVersionFormat(error) => format!("Unexpected version format {error}"),
+            ApiError::NotFound => "Resource was not found".into(),
+            ApiError::InvalidVersionRequirementFormat(error) => {
+                format!("The version requirement format {error} is not valid")
+            }
+            ApiError::IncorrectChecksum => {
+                "The downloaded data did not have the expected checksum".into()
+            }
+            ApiError::Forbidden => "This account is not authorized for this action".into(),
+            ApiError::NotReplacing => {
+                "Must explicitly express your intention to replace the release".into()
+            }
+            ApiError::LateModification => {
+                "Can only modify a release up to one hour after publication".into()
+            }
+            ApiError::LateDeletion => {
+                "Can only delete a release up to one hour after publication".into()
+            }
+            ApiError::OAuthTimeout => "The oauth request wasn't approved in time".into(),
+            ApiError::OAuthAccessDenied => "The oauth request was rejected".into(),
+            ApiError::ExpiredToken => {
+                "The oauth token expired before the request was approved".into()
+            }
+            ApiError::OAuthRefreshTokenRejected => {
+                "The oauth refresh token was expired, revoked, or already used".into()
+            }
+            ApiError::IncorrectOneTimePassword => {
+                "The supplied one-time-password was not correct".into()
+            }
+        }
     }
 }
 
@@ -1432,7 +1438,7 @@ pub fn oauth_refresh_token_response(
         status => return Err(ApiError::unexpected_response(status, body)),
     };
 
-    Ok(serde_json::from_slice(&body).map_err(ApiError::Json)?)
+    serde_json::from_slice(&body).map_err(ApiError::Json)
 }
 
 /// Get information about the currently authenticated user.
@@ -1453,7 +1459,7 @@ pub fn get_me_response(response: http::Response<Vec<u8>>) -> Result<Me, ApiError
         status => return Err(ApiError::unexpected_response(status, body)),
     };
 
-    Ok(serde_json::from_slice(&body).map_err(ApiError::Json)?)
+    serde_json::from_slice(&body).map_err(ApiError::Json)
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, serde::Deserialize)]
