@@ -594,7 +594,7 @@ pub enum DependencyResolutionFailureReason {
 }
 
 impl DependencyResolutionFailureReason {
-    pub fn describe(&self) -> String {
+    pub fn summary(&self) -> String {
         match self {
             DependencyResolutionFailureReason::ErrorRetrievingDependencies {
                 package,
@@ -602,13 +602,15 @@ impl DependencyResolutionFailureReason {
                 reason,
             } => format!(
                 "An error occurred while trying to retrieve dependencies of {package}@{version}: {}",
-                reason.describe()
+                reason.summarise()
             ),
             DependencyResolutionFailureReason::ErrorChoosingVersion { package, reason } => format!(
                 "An error occurred while choosing the version of {package}: {}",
-                reason.describe()
+                reason.summarise()
             ),
-            DependencyResolutionFailureReason::ErrorFetchingPackage { reason } => reason.describe(),
+            DependencyResolutionFailureReason::ErrorFetchingPackage { reason } => {
+                reason.summarise()
+            }
             DependencyResolutionFailureReason::MissingSignedVersion { package, version } => {
                 format!(
                     "The signed registry metadata for {package} did not \
@@ -656,7 +658,7 @@ impl Error {
             | hexpm::ApiError::LateDeletion
             | hexpm::ApiError::OAuthTimeout
             | hexpm::ApiError::OAuthAccessDenied
-            | hexpm::ApiError::ExpiredToken => Self::Hex(error.describe()),
+            | hexpm::ApiError::ExpiredToken => Self::Hex(error.summary()),
 
             hexpm::ApiError::OAuthRefreshTokenRejected => Self::HexSessionRevoked,
 
@@ -2137,7 +2139,7 @@ with `gleam hex authenticate`."
                     "An error occurred while trying make a git repository for this project:
 
     {}",
-                    error.describe()
+                    error.summarise()
                 );
                 vec![Diagnostic {
                     title: "Failed to initialize git repository".into(),
@@ -2455,7 +2457,7 @@ manifest.toml and a version range specified in gleam.toml:
 
             Error::DependencyResolutionError { reason } => vec![Diagnostic {
                 title: "Dependency resolution failed".into(),
-                text: wrap(&reason.describe()),
+                text: wrap(&reason.summary()),
                 hint: None,
                 location: None,
                 level: Level::Error,
@@ -2850,9 +2852,9 @@ not be found in the Hex package repository."
         }
     }
 
-    /// Turns the error into a brief description suitable to be imbedded inside
+    /// Turns the error into a brief summary suitable to be imbedded inside
     /// other error messages.
-    pub fn describe(&self) -> String {
+    pub fn summarise(&self) -> String {
         match self {
             Error::Parse { .. } => "failed to parse Gleam source code".into(),
             Error::Type { .. } => "type checking failed".into(),
@@ -2874,7 +2876,7 @@ not be found in the Hex package repository."
                 ..
             } => format!("{action:?} {path:?} failed: {cause:?}"),
             Error::NonUtf8Path { path } => format!("Non Utf-8 Path: {}", path.display()),
-            Error::GitInitialization { error } => error.describe(),
+            Error::GitInitialization { error } => error.summarise(),
             Error::LspMessageSendFailed { error } => format!("Failed to send LSP message: {error}"),
             Error::LspMessageReceiveFailed { error } => {
                 format!("Failed to receive LSP message: {error}")
@@ -2950,7 +2952,7 @@ not be found in the Hex package repository."
                 "Could not find versions that satisfy dependency requirements".into()
             }
             Error::DependencyResolutionError { reason } => {
-                format!("Dependency resolution failed: {}", reason.describe())
+                format!("Dependency resolution failed: {}", reason.summary())
             }
             Error::DuplicateDependency(package) => {
                 format!("The package {package} is listed in dependencies and dev_dependencies")
