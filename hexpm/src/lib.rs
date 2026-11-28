@@ -307,7 +307,7 @@ pub fn repository_v2_get_versions_response(
 
     let mut decoder = GzDecoder::new(body.reader());
     let mut body = Vec::new();
-    decoder.read_to_end(&mut body)?;
+    decoder.read_to_end(&mut body).map_err(ApiError::Io)?;
 
     repository_v2_get_versions_body(&body, public_key)
 }
@@ -380,7 +380,7 @@ pub fn repository_v2_get_package_response(
 
     let mut decoder = GzDecoder::new(body.reader());
     let mut body = Vec::new();
-    decoder.read_to_end(&mut body)?;
+    decoder.read_to_end(&mut body).map_err(ApiError::Io)?;
 
     repository_v2_package_parse_body(&body, public_key)
 }
@@ -743,7 +743,7 @@ pub enum ApiError {
     Json(serde_json::Error),
 
     #[error(transparent)]
-    Io(#[from] std::io::Error),
+    Io(std::io::Error),
 
     #[error("The rate limit for the Hex API has been exceeded")]
     RateLimited,
@@ -829,7 +829,7 @@ fn read_and_check_body(reader: impl std::io::Read, checksum: &[u8]) -> Result<Ve
     let mut body = Vec::new();
 
     loop {
-        let count = reader.read(&mut buffer)?;
+        let count = reader.read(&mut buffer).map_err(ApiError::Io)?;
         if count == 0 {
             break;
         }
