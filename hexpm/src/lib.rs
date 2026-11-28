@@ -738,7 +738,7 @@ pub fn api_remove_owner_response(response: http::Response<Vec<u8>>) -> Result<()
 #[derive(Error, Debug)]
 pub enum ApiError {
     #[error(transparent)]
-    Json(#[from] serde_json::Error),
+    Json(serde_json::Error),
 
     #[error(transparent)]
     Io(#[from] std::io::Error),
@@ -1203,7 +1203,7 @@ pub fn api_get_package_release_response(
     let (parts, body) = response.into_parts();
 
     match parts.status {
-        StatusCode::OK => Ok(serde_json::from_slice(&body)?),
+        StatusCode::OK => Ok(serde_json::from_slice(&body).map_err(ApiError::Json)?),
         StatusCode::NOT_FOUND => Err(ApiError::NotFound),
         StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
         StatusCode::UNAUTHORIZED => Err(unauthorised_response(&parts.headers)),
@@ -1245,7 +1245,8 @@ pub fn oauth_device_authorisation_response(
         status => return Err(ApiError::unexpected_response(status, body)),
     };
 
-    let data: DeviceAuthorisationResponseBody = serde_json::from_slice(&body)?;
+    let data: DeviceAuthorisationResponseBody =
+        serde_json::from_slice(&body).map_err(ApiError::Json)?;
     let poll_interval = Duration::from_secs(data.poll_interval_seconds);
     let verification_uri = data
         .verification_uri_complete
@@ -1304,7 +1305,7 @@ impl OAuthDeviceAuthorisation {
             status => return Err(ApiError::unexpected_response(status, body)),
         };
 
-        let data: PollResponseBody = serde_json::from_slice(&body)?;
+        let data: PollResponseBody = serde_json::from_slice(&body).map_err(ApiError::Json)?;
         match data.into_result() {
             Ok(tokens) => Ok(PollStep::Done(tokens)),
 
@@ -1429,7 +1430,7 @@ pub fn oauth_refresh_token_response(
         status => return Err(ApiError::unexpected_response(status, body)),
     };
 
-    Ok(serde_json::from_slice(&body)?)
+    Ok(serde_json::from_slice(&body).map_err(ApiError::Json)?)
 }
 
 /// Get information about the currently authenticated user.
@@ -1450,7 +1451,7 @@ pub fn get_me_response(response: http::Response<Vec<u8>>) -> Result<Me, ApiError
         status => return Err(ApiError::unexpected_response(status, body)),
     };
 
-    Ok(serde_json::from_slice(&body)?)
+    Ok(serde_json::from_slice(&body).map_err(ApiError::Json)?)
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, serde::Deserialize)]
