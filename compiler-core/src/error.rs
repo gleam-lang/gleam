@@ -34,7 +34,6 @@ use std::io::Write as IoWrite;
 use std::path::PathBuf;
 use std::sync::Arc;
 use termcolor::Buffer;
-use thiserror::Error;
 use vec1::Vec1;
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -79,8 +78,7 @@ pub struct DefinedModuleOrigin {
 }
 
 /// A module for which type checking failed.
-#[derive(Debug, Eq, PartialEq, Error, Clone)]
-#[error("type checking failed")]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct FailedModule {
     pub path: Utf8PathBuf,
     pub src: EcoString,
@@ -88,8 +86,7 @@ pub struct FailedModule {
     pub names: Box<Names>,
 }
 
-#[derive(Debug, Eq, PartialEq, Error, Clone)]
-#[error("module couldn't be analysed")]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct SkippedModule {
     pub path: Utf8PathBuf,
     pub code: EcoString,
