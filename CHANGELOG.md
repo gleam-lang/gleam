@@ -401,7 +401,6 @@
   type Wobble(a)
 
   fn wibble(argument: Wobble(Int)) {
-                   // ^^^^^^^^^^^ Trigger code action here
     todo
   }
   ```
