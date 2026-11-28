@@ -6,7 +6,7 @@ use std::str::FromStr;
 
 use crate::io::make_relative;
 use camino::{Utf8Path, Utf8PathBuf};
-use ecow::EcoString;
+use ecow::{EcoString, eco_format};
 use hexpm::version::Range;
 use serde::Deserialize;
 use serde::de::{self, Deserializer, MapAccess, Visitor};
@@ -44,9 +44,9 @@ pub struct InvalidVersionFormat {
 }
 
 impl InvalidVersionFormat {
-    pub fn summarise(&self) -> String {
+    pub fn summarise(&self) -> EcoString {
         let InvalidVersionFormat { input, error } = self;
-        format!("{input} is not a valid version. {error}")
+        eco_format!("{input} is not a valid version. {error}")
     }
 }
 
