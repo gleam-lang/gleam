@@ -256,7 +256,7 @@ impl Downloader {
             .map_err(|error| Error::FailedToDownloadPackageVersionFromHex {
             name: package.name.to_string(),
             version: package.version.to_string(),
-            error: error.to_string(),
+            error: error.describe(),
         })?;
         self.fs_writer.write_bytes(&tarball_path, &tarball)?;
         Ok(true)
