@@ -317,12 +317,13 @@ pub fn repository_v2_get_versions_body(
     protobuf_bytes: &Vec<u8>,
     public_key: &[u8],
 ) -> Result<HashMap<String, Vec<Version>>, ApiError> {
-    let signed = Signed::decode(protobuf_bytes.as_slice())?;
+    let signed = Signed::decode(protobuf_bytes.as_slice()).map_err(ApiError::InvalidProtobuf)?;
 
     let payload =
         verify_payload(signed, public_key).map_err(|_| ApiError::IncorrectPayloadSignature)?;
 
-    let versions = Versions::decode(payload.as_slice())?
+    let versions = Versions::decode(payload.as_slice())
+        .map_err(ApiError::InvalidProtobuf)?
         .packages
         .into_iter()
         .map(|package| {
@@ -389,12 +390,13 @@ pub fn repository_v2_package_parse_body(
     protobuf_bytes: &Vec<u8>,
     public_key: &[u8],
 ) -> Result<Package, ApiError> {
-    let signed = Signed::decode(protobuf_bytes.as_slice())?;
+    let signed = Signed::decode(protobuf_bytes.as_slice()).map_err(ApiError::InvalidProtobuf)?;
 
     let payload =
         verify_payload(signed, public_key).map_err(|_| ApiError::IncorrectPayloadSignature)?;
 
-    let package = proto::package::Package::decode(payload.as_slice())?;
+    let package =
+        proto::package::Package::decode(payload.as_slice()).map_err(ApiError::InvalidProtobuf)?;
     let proto::package::Package {
         name,
         repository,
@@ -759,7 +761,7 @@ pub enum ApiError {
     IncorrectPayloadSignature,
 
     #[error(transparent)]
-    InvalidProtobuf(#[from] prost::DecodeError),
+    InvalidProtobuf(prost::DecodeError),
 
     #[error("Unexpected version format {0}")]
     InvalidVersionFormat(String),
