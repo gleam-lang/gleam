@@ -124,6 +124,55 @@ pub struct TypedDefinitions {
     pub functions: Vec<TypedFunction>,
 }
 
+impl TypedDefinitions {
+    /// Returns an iterator of definitions, excluding imports.
+    /// This function is useful for performing code actions on local definitions.
+    /// For example, it is used for automatically generating a missing type definition.
+    pub fn iter_definitions<'a>(&'a self) -> impl Iterator<Item = TypedDefinition<'a>> {
+        let constants = self.constants.iter().map(TypedDefinition::Constant);
+
+        let functions = self.functions.iter().map(TypedDefinition::Function);
+
+        let custom_types = self.custom_types.iter().map(TypedDefinition::CustomType);
+
+        let type_aliases = self.type_aliases.iter().map(TypedDefinition::TypeAlias);
+
+        constants
+            .chain(functions)
+            .chain(custom_types)
+            .chain(type_aliases)
+    }
+}
+
+/// Contains a reference to a typed definition.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TypedDefinition<'a> {
+    Constant(&'a TypedModuleConstant),
+    CustomType(&'a TypedCustomType),
+    TypeAlias(&'a TypedTypeAlias),
+    Function(&'a TypedFunction),
+}
+
+impl<'a> TypedDefinition<'a> {
+    pub const fn publicity(&self) -> Publicity {
+        match self {
+            TypedDefinition::Constant(constant) => constant.publicity,
+            TypedDefinition::CustomType(custom_type) => custom_type.publicity,
+            TypedDefinition::TypeAlias(type_alias) => type_alias.publicity,
+            TypedDefinition::Function(function) => function.publicity,
+        }
+    }
+
+    pub fn full_location(&self) -> SrcSpan {
+        match self {
+            TypedDefinition::Constant(module_constant) => module_constant.location,
+            TypedDefinition::CustomType(custom_type) => custom_type.full_location(),
+            TypedDefinition::TypeAlias(type_alias) => type_alias.location,
+            TypedDefinition::Function(function) => function.full_location(),
+        }
+    }
+}
+
 /// The `@target(erlang)` and `@target(javascript)` attributes can be used to
 /// mark a definition as only being for a specific target.
 ///

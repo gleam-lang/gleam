@@ -1,0 +1,15 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\ntype Wibble = Wobble\n"
+---
+----- BEFORE ACTION
+
+type Wibble = Wobble
+              ↑     
+
+
+----- AFTER ACTION
+
+type Wibble = Wobble
+
+type Wobble

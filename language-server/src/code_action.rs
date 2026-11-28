@@ -13,9 +13,9 @@ use gleam_core::{
         ImplicitCallArgOrigin, Import, InvalidExpression, PIPE_PRECEDENCE, Pattern,
         PatternUnusedArguments, PipelineAssignmentKind, Publicity, RecordConstructor,
         StringPrefixLeftSideAssignment, TodoKind, TypeAstConstructorName, TypedArg,
-        TypedAssignment, TypedClauseGuard, TypedDefinitions, TypedExpr, TypedFunction,
-        TypedModuleConstant, TypedPattern, TypedPipelineAssignment, TypedRecordConstructor,
-        TypedStatement, TypedTailPattern, TypedUse, visit::Visit as _,
+        TypedAssignment, TypedClauseGuard, TypedCustomType, TypedDefinition, TypedDefinitions,
+        TypedExpr, TypedFunction, TypedModuleConstant, TypedPattern, TypedPipelineAssignment,
+        TypedRecordConstructor, TypedStatement, TypedTailPattern, TypedUse, visit::Visit as _,
     },
     build::{Located, Module, Origin},
     config::PackageConfig,
@@ -1318,11 +1318,48 @@ pub fn code_action_generate_type(
             continue;
         }
 
-        // Insert the new type stub before the top-level definition that
-        // contains the error, so it appears close to where it is used.
-        let (insert_at, is_public) =
-            definition_start_and_publicity_containing(&module.ast.definitions, location.start)
-                .unwrap_or((module.code.len() as u32, false));
+        let maybe_definition =
+            definition_containing_position(&module.ast.definitions, location.start);
+
+        let (is_public, insert_at, prefix_newline) = match maybe_definition {
+            Some(definition) => {
+                let (insertion_position, prefix_newline) = match definition {
+                    // Types -> generate below
+                    TypedDefinition::CustomType(_) | TypedDefinition::TypeAlias(_) => {
+                        (definition.full_location().end, "\n\n")
+                    }
+
+                    // Functions and constants -> generate above
+                    TypedDefinition::Function(function) => {
+                        // If the function has any doc comments we want the generated type to
+                        // end up above the doc comment too! So we consider the documentation's
+                        // start as the start of the function definition.
+                        (
+                            match function.documentation {
+                                None => function.full_location().start,
+                                Some((documentation_start, _)) => {
+                                    // The `documentation_start` we track here is the start of the
+                                    // written content right after the `///`, so we also need to
+                                    // subtract 3 here to make sure we start before the `///`.
+                                    documentation_start - 3
+                                }
+                            },
+                            "",
+                        )
+                    }
+
+                    TypedDefinition::Constant(constant) => (constant.location.start, ""),
+                };
+
+                (
+                    definition.publicity().is_public(),
+                    insertion_position,
+                    prefix_newline,
+                )
+            }
+            None => (false, module.code.len() as u32, ""),
+        };
+
         let insert_range = src_span_to_lsp_range(
             SrcSpan {
                 start: insert_at,
@@ -1333,10 +1370,10 @@ pub fn code_action_generate_type(
 
         let pub_prefix = if is_public { "pub " } else { "" };
         let new_text = if parameter_names.is_empty() {
-            format!("{pub_prefix}type {name}\n\n")
+            format!("{prefix_newline}{pub_prefix}type {name}\n\n")
         } else {
             let parameters = parameter_names.join(", ");
-            format!("{pub_prefix}type {name}({parameters})\n\n")
+            format!("{prefix_newline}{pub_prefix}type {name}({parameters})\n\n")
         };
 
         let edit = TextEdit {
@@ -1352,51 +1389,18 @@ pub fn code_action_generate_type(
     }
 }
 
-/// Returns the source offset and publicity of the top-level definition that
-/// contains `position`, so the caller can insert code before it.
-fn definition_start_and_publicity_containing(
-    definitions: &TypedDefinitions,
+/// Finds the definition that contains the provided position.
+fn definition_containing_position<'a>(
+    definitions: &'a TypedDefinitions,
     position: u32,
-) -> Option<(u32, bool)> {
-    let functions = definitions.functions.iter().map(|function| {
-        // If the function has any doc comments we want the generated type to
-        // end up above the doc comment too! So we consider the documentation's
-        // start as the start of the function definition.
-        let full_location_with_docs = match function.documentation {
-            None => function.full_location(),
-            Some((documentation_start, _)) => {
-                // The `documentation_start` we track here is the start of the
-                // written content right after the `///`, so we also need to
-                // subtract 3 here to make sure we start before the `///`.
-                SrcSpan::new(documentation_start - 3, function.full_location().end)
-            }
-        };
-        (full_location_with_docs, function.publicity.is_public())
-    });
+) -> Option<TypedDefinition<'a>> {
+    definitions
+        .iter_definitions()
+        .filter(|definition| {
+            let span = definition.full_location();
 
-    let custom_types = definitions.custom_types.iter().map(|custom_type| {
-        (
-            custom_type.full_location(),
-            custom_type.publicity.is_public(),
-        )
-    });
-
-    let type_aliases = definitions
-        .type_aliases
-        .iter()
-        .map(|type_alias| (type_alias.location, type_alias.publicity.is_public()));
-
-    let constants = definitions
-        .constants
-        .iter()
-        .map(|constant| (constant.location, constant.publicity.is_public()));
-
-    functions
-        .chain(custom_types)
-        .chain(type_aliases)
-        .chain(constants)
-        .filter(|(span, _)| span.start <= position && position <= span.end)
-        .map(|(span, is_public)| (span.start, is_public))
+            span.start <= position && position <= span.end
+        })
         .next()
 }
 
@@ -4621,7 +4625,7 @@ impl<'a, IO> GenerateDynamicDecoder<'a, IO> {
     fn constructor_decoder(
         &mut self,
         mode: EncodingMode,
-        custom_type: &ast::TypedCustomType,
+        custom_type: &TypedCustomType,
         constructor: &TypedRecordConstructor,
         nesting: usize,
     ) -> Option<EcoString> {
@@ -4721,7 +4725,7 @@ impl<'a, IO> GenerateDynamicDecoder<'a, IO> {
 }
 
 impl<'ast, IO> ast::visit::Visit<'ast> for GenerateDynamicDecoder<'ast, IO> {
-    fn visit_typed_custom_type(&mut self, custom_type: &'ast ast::TypedCustomType) {
+    fn visit_typed_custom_type(&mut self, custom_type: &'ast TypedCustomType) {
         let range = self
             .edits
             .src_span_to_lsp_range(custom_type.full_location());
@@ -5372,7 +5376,7 @@ fn is_nil_like(type_: &Type) -> bool {
 }
 
 impl<'ast> ast::visit::Visit<'ast> for GenerateJsonEncoder<'ast> {
-    fn visit_typed_custom_type(&mut self, custom_type: &'ast ast::TypedCustomType) {
+    fn visit_typed_custom_type(&mut self, custom_type: &'ast TypedCustomType) {
         let range = self
             .edits
             .src_span_to_lsp_range(custom_type.full_location());
@@ -9759,7 +9763,7 @@ impl<'a> RemovePrivateOpaque<'a> {
 }
 
 impl<'ast> ast::visit::Visit<'ast> for RemovePrivateOpaque<'ast> {
-    fn visit_typed_custom_type(&mut self, custom_type: &'ast ast::TypedCustomType) {
+    fn visit_typed_custom_type(&mut self, custom_type: &'ast TypedCustomType) {
         let custom_type_range = self.edits.src_span_to_lsp_range(custom_type.location);
         if !within(self.params.range, custom_type_range) {
             return;
@@ -12451,7 +12455,7 @@ impl<'a> AddMissingTypeParameter<'a> {
 }
 
 impl<'ast> ast::visit::Visit<'ast> for AddMissingTypeParameter<'ast> {
-    fn visit_typed_custom_type(&mut self, custom_type: &'ast ast::TypedCustomType) {
+    fn visit_typed_custom_type(&mut self, custom_type: &'ast TypedCustomType) {
         let custom_type_range = self
             .edits
             .src_span_to_lsp_range(custom_type.full_location());
