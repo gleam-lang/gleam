@@ -44,7 +44,7 @@ pub struct InvalidVersionFormat {
 }
 
 impl InvalidVersionFormat {
-    pub fn summary(&self) -> String {
+    pub fn summarise(&self) -> String {
         let InvalidVersionFormat { input, error } = self;
         format!("{input} is not a valid version. {error}")
     }
@@ -169,7 +169,7 @@ impl<'de> Visitor<'de> for RequirementVisitor {
     {
         match value.parse::<Requirement>() {
             Ok(value) => Ok(value),
-            Err(error) => Err(de::Error::custom(error.summary())),
+            Err(error) => Err(de::Error::custom(error.summarise())),
         }
     }
 
