@@ -566,6 +566,11 @@ pub fn api_publish_package_response(response: http::Response<Vec<u8>>) -> Result
                 Err(ApiError::NotReplacing)
             } else if body.contains("can only modify a release up to one hour after publication") {
                 Err(ApiError::LateModification)
+            } else if let Ok(json) = serde_json::from_str::<serde_json::Value>(&body)
+                && let Some(tar_error) = json["errors"]["tar"].as_str()
+                && tar_error.starts_with("File too big:")
+            {
+                Err(ApiError::FileTooBig(tar_error.to_string()))
             } else {
                 Err(ApiError::UnexpectedResponse(
                     StatusCode::UNPROCESSABLE_ENTITY,
@@ -781,6 +786,9 @@ pub enum ApiError {
 
     #[error("Can only modify a release up to one hour after publication")]
     LateModification,
+
+    #[error("{0}")]
+    FileTooBig(String),
 
     #[error("Can only delete a release up to one hour after publication")]
     LateDeletion,

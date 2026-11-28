@@ -581,6 +581,7 @@ impl Error {
             | hexpm::ApiError::Forbidden
             | hexpm::ApiError::NotReplacing
             | hexpm::ApiError::LateModification
+            | hexpm::ApiError::FileTooBig(_)
             | hexpm::ApiError::LateDeletion
             | hexpm::ApiError::OAuthTimeout
             | hexpm::ApiError::OAuthAccessDenied
